@@ -17,15 +17,9 @@ import {
   AsyncStorage,
   TextInput
 } from 'react-native';
+
 import * as opentype from 'opentype.js';
 
-const size = Dimensions.get('window');
-const windowWidth = size.width;
-const windowHeight = size.height;
-console.log(size);
-console.log(Dimensions.get('screen'));
-
-const FileStorageKey = 'FileStorageKey';
 
 export default class App extends Component {
   constructor(props) {
@@ -35,12 +29,18 @@ export default class App extends Component {
       mouseOver: false,
       files: [],
       glyphs: [],
-      selectedIndex: 0,
+      mapperText: '',
+      selectedFile: '',
     }
   }
 
   componentDidMount() {
-    this.getStorageFile();
+    this.getStorageFile((files)=> {
+      this.parseFile(files[0], (glyphs)=> {
+        this.reloadFiles(files);
+        this.reloadGlyphs(glyphs);      
+      });
+    });
   }
 
   renderAppNameView() {
@@ -71,7 +71,7 @@ export default class App extends Component {
   }
 
   renderFontFileView() {
-    const { files } = this.state;
+    const { files, selectedFile } = this.state;
     return (
       <ScrollView 
       horizontal  
@@ -79,17 +79,19 @@ export default class App extends Component {
       contentContainerStyle={fileItemStyles.fontFileContainerItem} 
       >
         {
-          files.map((e, index)=> { return (
-            <View key={index} style={fileItemStyles.fileItemWrap}>
-              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileItem} onPress={()=> this.onFileSelected(index)}>
-                <View style={fileItemStyles.fileIconWrap}>
-                  <Text style={{fontSize: 35, color: '#ddd'}}>𝐹</Text>
+          files.map((e)=> { 
+            const isSelectedColor = e === selectedFile ? 'orange' : '#ddd';
+            return (
+            <View key={e} style={fileItemStyles.fileItemWrap}>
+              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileItem} onPress={()=> this.onFileSelected(e)}>
+                <View style={[fileItemStyles.fileIconWrap, {borderColor: isSelectedColor}]}>
+                  <Text style={{fontSize: 40,  color: isSelectedColor}}>𝐹</Text>
                 </View>
                 <View style={fileItemStyles.fileNameWrap}>
-                  <Text style={fileItemStyles.fileName} numberOfLines={1}>{e.split('/').pop()}</Text>
+                  <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{e.split('/').pop()}</Text>
                 </View>             
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileClose} onPress={()=> this.onDeleteFileItem(index)}>
+              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileClose} onPress={()=> this.onDeleteFileItem(e)}>
                 <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
               </TouchableOpacity>                                         
             </View>
@@ -100,14 +102,13 @@ export default class App extends Component {
     );    
   }
 
-  renderJsonMapperView(glyphs) {
-    const jsonText = this.parseMapperGlyphs(glyphs);
+  renderJsonMapperView() {
     return (
       <View style={panelStyles.mapperView}>
 <ScrollView >
         <View style={{flex: 1, backgroundColor: '#fff'}}>
           <Text style={{flex: 1, backgroundColor: '#fff'}} selectable={true}>
-            {jsonText}
+            {this.state.mapperText}
           </Text>
         </View>
       </ScrollView>
@@ -161,66 +162,82 @@ export default class App extends Component {
     );
   }
 
-  onFileSelected(index) {
-    const file = this.state.files[index];
-    this.loadFile(file);
+  onFileSelected(file) {
+    this.parseFile(file, (glyphs)=> {
+      this.setState({
+        selectedFile: file
+      });
+      this.reloadGlyphs(glyphs);     
+    });
   }
 
-  onDeleteFileItem(index) {
-    const files = this.state.files.filter((e, idx)=> idx !== index);
-    this.setState({
-      files: files
-    });
-    const isSelected = (this.state.selectedIndex === index);
+  onDeleteFileItem(file) {
+    const { files, selectedFile } = this.state;
+    const deleteIndex = files.indexOf(file);    
+    const newFiles = files.filter(e => e != file);
+    if (newFiles.length === 0) {
+      this.reloadFiles([], '');
+      this.reloadGlyphs([]);
+      return;  
+    }
+
+    if (file === selectedFile) {
+      let newSelectedFile = ''; 
+      if (deleteIndex === 0) {
+        newSelectedFile = newFiles[0];
+      } else if (deleteIndex === (files.length - 1)) {
+        newSelectedFile = newFiles[newFiles.length-1];
+      } else {
+        newSelectedFile = newFiles[deleteIndex];
+      }
+
+      this.parseFile(selectedFile, (glyphs)=> {    
+        this.reloadGlyphs(glyphs);
+        this.reloadFiles(newFiles, newSelectedFile)     
+      });   
+    }     
   }
 
   onDrop(e) {
     console.log(e.nativeEvent);
     let files = e.nativeEvent.files;
     files = this.filteredTTFFiles(files);
-
+    if(files.length === 0) return;
     this.setState({
-      files: files, 
       dragOver: false
-    }, ()=> {
-      this.setStorageFile();
     });
 
-    const file = files[0];
-    this.loadFile(file)    
+    this.parseFile(files[0], (glyphs)=> {
+      this.setStorageFile(files);     
+      this.reloadFiles([ ...files, ...this.state.files]);
+      this.reloadGlyphs(glyphs);      
+    });    
   }
 
   filteredTTFFiles(files) {
     return files.filter(e => e.endsWith('.ttf'));
   }
 
-  loadFile(file) {
+  parseFile(file, success) {
     opentype.load(file, (err, font)=> {
       if (err) {
         console.warn(err);
         return;
       }
       console.log(font);
-      this.parseFont(font);
+      const fontGlyphs = font.glyphs;
+      let glyphs = []    
+      for (let i = 0; i < fontGlyphs.length; i++) {
+        let glyph = fontGlyphs.get(i);
+        let path = glyph.getPath(0, 40, 40);
+        glyph.svg = path.toSVG();
+        glyph.hex = this.toHex(glyph.unicode);
+        glyphs.push(glyph); 
+      }
+      console.log(glyphs);
+      success && success(glyphs);  
     });  
   }
-
-  parseFont(font) {
-    const fontGlyphs = font.glyphs;
-    let glyphs = []    
-    for (let i = 0; i < fontGlyphs.length; i++) {
-      let glyph = fontGlyphs.get(i);
-      let path = glyph.getPath(0, 40, 40);
-      glyph.svg = path.toSVG();
-      glyph.hex = this.toHex(glyph.unicode);
-      glyphs.push(glyph); 
-    }
-    
-    this.setState({
-      glyphs: glyphs
-    });
-    console.log(glyphs);
-  } 
 
   toHex(unicode) {
     if(unicode == undefined) return undefined;
@@ -234,6 +251,20 @@ export default class App extends Component {
   parseMapperGlyphs(glyphs) {
     const mapperText = glyphs.filter(e=> e.name && e.unicode).map(e=> `  ${e.name}: ${e.unicode},`).join('\n');
     return `{\n${mapperText}\n}`;
+  }
+
+  reloadGlyphs(glyphs) {
+    this.setState({
+      glyphs: glyphs,
+      mapperText: this.parseMapperGlyphs(glyphs)
+    });
+  }
+
+  reloadFiles(files, selectedFile = files[0]) {
+    this.setState({
+      files: files,
+      selectedFile: selectedFile
+    })
   }
 
   getGlyphHtml(glyph) {
@@ -262,20 +293,17 @@ export default class App extends Component {
     );
   }
 
-  getStorageFile() {
-    AsyncStorage.getItem(FileStorageKey).then(filesJosn => {
+  getStorageFile(success) {
+    AsyncStorage.getItem('FileNameStorageKey').then(filesJosn => {
       files = JSON.parse(filesJosn);
-      if (files !== null) {
-        this.setState({
-          files: files
-        });
+      if (files !== null && files.length > 0) {
+        success && success(files);        
       }
     });
   }
 
-  setStorageFile() {
-    let files = this.state.files;
-    AsyncStorage.setItem(FileStorageKey, JSON.stringify(files));
+  setStorageFile(files) {
+    AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
   }
 }
 
@@ -299,7 +327,6 @@ const fileItemStyles = StyleSheet.create({
   fileIconWrap: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderColor: '#ddd',
     borderWidth: 1,
     width: 80,
     height: 100,
@@ -317,7 +344,6 @@ const fileItemStyles = StyleSheet.create({
   },
   fileName: {
     fontSize: 14,
-    color: '#333',
     textAlign: 'center',
   },
   fileClose: {
