@@ -20,27 +20,32 @@ import {
 
 import * as opentype from 'opentype.js';
 
-
 export default class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
       dragOver: false,
-      mouseOver: false,
       files: [],
       glyphs: [],
       mapperText: '',
       selectedFile: '',
+      glyphsCaches: {}
     }
   }
 
-  componentDidMount() {
-    this.getStorageFile((files)=> {
-      this.parseFile(files[0], (glyphs)=> {
-        this.reloadFiles(files);
-        this.reloadGlyphs(glyphs);      
-      });
+  componentDidMount() {   
+    AsyncStorage.getItem('FileNameStorageKey').then(filesJson => {
+      files = JSON.parse(filesJson);
+      if (files !== null && files.length > 0) {
+        this.parseFile(files[0], files);
+      }
     });
+  }
+
+  componentWillUnmount() {
+    console.log('componentWillUnmountcomponentWillUnmountcomponentWillUnmountcomponentWillUnmountcomponentWillUnmountcomponentWillUnmount');
+    const files = this.state.files || []
+    AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
   }
 
   renderAppNameView() {
@@ -52,26 +57,25 @@ export default class App extends Component {
   }
 
   renderDragView() {
-    const { files, dragOver, mouseOver  } = this.state;
-    const dragColor =  dragOver ? 'yellow' : (mouseOver ? 'orange' : '#F5FCFF');
+    const { files, dragOver  } = this.state;
+    const dragColor =  dragOver ? 'orange' : '#333';
     return (
       <View
-        style={[styles.fullDragView ,{backgroundColor: dragColor}]}
+        style={[styles.fullDragView]}
         draggedTypes={['NSFilenamesPboardType']}
-        onMouseEnter={() => this.setState({mouseOver: true})}
-        onMouseLeave={() => this.setState({mouseOver: false})}
         onDragEnter={() => this.setState({dragOver: true})}
         onDragLeave={() => this.setState({dragOver: false})}
         onDrop={(e) => this.onDrop(e)}>
-        <Text style={{fontSize: 14, color: 'black'}}>
-          {files.length > 0 ? files : 'Drag here a file'}
-        </Text>        
+        <Text style={{fontSize: 14, color: dragColor }}>
+          {files.length > 0 ? files : 'Drop .ttf files here'}
+        </Text>               
       </View>
     );
   }
 
   renderFontFileView() {
-    const { files, selectedFile } = this.state;
+    const { files, selectedFile, dragOver } = this.state;
+    const dragColor =  dragOver ? 'orange' :  '#ddd';
     return (
       <ScrollView 
       horizontal  
@@ -79,11 +83,11 @@ export default class App extends Component {
       contentContainerStyle={fileItemStyles.fontFileContainerItem} 
       >
         {
-          files.map((e)=> { 
+          files.map(e => { 
             const isSelectedColor = e === selectedFile ? 'orange' : '#ddd';
             return (
             <View key={e} style={fileItemStyles.fileItemWrap}>
-              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileItem} onPress={()=> this.onFileSelected(e)}>
+              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(e)}>
                 <View style={[fileItemStyles.fileIconWrap, {borderColor: isSelectedColor}]}>
                   <Text style={{fontSize: 40,  color: isSelectedColor}}>𝐹</Text>
                 </View>
@@ -91,13 +95,14 @@ export default class App extends Component {
                   <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{e.split('/').pop()}</Text>
                 </View>             
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileClose} onPress={()=> this.onDeleteFileItem(e)}>
+              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileClose} onPress={() => this.onDeleteFileItem(e)}>
                 <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
               </TouchableOpacity>                                         
             </View>
             )}
           )        
         }
+        <Text style={{ color: dragColor, marginLeft: 20 }}>Drop .ttf files here</Text>
       </ScrollView>
     );    
   }
@@ -127,15 +132,13 @@ export default class App extends Component {
 
   renderPanelView() {
     const { glyphs } = this.state;
-    const { files, dragOver, mouseOver  } = this.state;
+    const { files, dragOver  } = this.state;
     const dragColor =  dragOver ? 'orange' :  '#ddd';
     let html = this.getGlyphWrapperHtml(glyphs);
     return (
       <View style={panelStyles.panelView}>
         <View style={[panelStyles.headerView, {borderColor: dragColor}]}
             draggedTypes={['NSFilenamesPboardType']}
-            onMouseEnter={() => this.setState({mouseOver: true})}
-            onMouseLeave={() => this.setState({mouseOver: false})}
             onDragEnter={() => this.setState({dragOver: true})}
             onDragLeave={() => this.setState({dragOver: false})}
             onDrop={(e) => this.onDrop(e)}
@@ -145,7 +148,7 @@ export default class App extends Component {
 
         <View style={panelStyles.fontShowView}>         
           <View style={panelStyles.fontShow}>
-            <WebView source={{html:html}} />
+            <WebView style={{ flex: 1 }} source={{html:html}} />
           </View> 
           { this.renderJsonMapperView(glyphs) }          
         </View>
@@ -163,12 +166,9 @@ export default class App extends Component {
   }
 
   onFileSelected(file) {
-    this.parseFile(file, (glyphs)=> {
-      this.setState({
-        selectedFile: file
-      });
-      this.reloadGlyphs(glyphs);     
-    });
+    const { files, selectedFile } = this.state;
+    if (selectedFile === file) return;
+    this.parseFile(file, files);
   }
 
   onDeleteFileItem(file) {
@@ -176,9 +176,13 @@ export default class App extends Component {
     const deleteIndex = files.indexOf(file);    
     const newFiles = files.filter(e => e != file);
     if (newFiles.length === 0) {
-      this.reloadFiles([], '');
-      this.reloadGlyphs([]);
-      return;  
+      this.setState({
+        files: [],
+        glyphs: [],
+        mapperText: '',
+        selectedFile: '',
+      }); 
+      return; 
     }
 
     if (file === selectedFile) {
@@ -190,53 +194,85 @@ export default class App extends Component {
       } else {
         newSelectedFile = newFiles[deleteIndex];
       }
-
-      this.parseFile(selectedFile, (glyphs)=> {    
-        this.reloadGlyphs(glyphs);
-        this.reloadFiles(newFiles, newSelectedFile)     
-      });   
-    }     
+      this.parseFile(newSelectedFile, newFiles);      
+    } else {
+      this.setState({
+        files: newFiles,
+      }); 
+    }    
   }
 
   onDrop(e) {
-    console.log(e.nativeEvent);
-    let files = e.nativeEvent.files;
-    files = this.filteredTTFFiles(files);
-    if(files.length === 0) return;
     this.setState({
       dragOver: false
     });
 
-    this.parseFile(files[0], (glyphs)=> {
-      this.setStorageFile(files);     
-      this.reloadFiles([ ...files, ...this.state.files]);
-      this.reloadGlyphs(glyphs);      
-    });    
+    console.log(e.nativeEvent);
+    let files = e.nativeEvent.files;
+    files = this.filteredTTFFiles(files);
+
+    if(files.length === 0) return;
+    this.parseFile(files[0], [...this.state.files, ...files]);
   }
 
   filteredTTFFiles(files) {
-    return files.filter(e => e.endsWith('.ttf'));
+    let oFiles = this.state.files;
+    return files.filter(e => {
+      return e.endsWith('.ttf') && !oFiles.includes(e);
+    });
   }
 
-  parseFile(file, success) {
-    opentype.load(file, (err, font)=> {
+  parseFile(file, files) {
+    const glyphs = this.state.glyphsCaches[file];
+    if (glyphs) {
+      this.loadFileGlyphs(file, files, glyphs);
+      return;
+    }
+
+    opentype.load(file, (err, font) => {
       if (err) {
         console.warn(err);
         return;
       }
-      console.log(font);
-      const fontGlyphs = font.glyphs;
-      let glyphs = []    
-      for (let i = 0; i < fontGlyphs.length; i++) {
-        let glyph = fontGlyphs.get(i);
+      // console.log(font);
+      const glyphs = this.getConfigGlyphs(font.glyphs);
+      this.state.glyphsCaches[file] = glyphs;     
+      this.loadFileGlyphs(file, files, glyphs);
+    });  
+  }
+
+  getConfigGlyphs(fontGlyphs) {
+    let glyphs = []    
+    for (let i = 0; i < fontGlyphs.length; i++) {
+      let glyph = fontGlyphs.get(i);
+      if(this.filteredNullGlyph(glyph)) {
         let path = glyph.getPath(0, 40, 40);
         glyph.svg = path.toSVG();
         glyph.hex = this.toHex(glyph.unicode);
         glyphs.push(glyph); 
-      }
-      console.log(glyphs);
-      success && success(glyphs);  
-    });  
+      }        
+    }
+    return glyphs;
+  }
+
+  loadFileGlyphs(file, files, glyphs) {
+    console.log(file);
+    console.log(files);
+    // console.log(glyphs);
+
+    const hasNames = glyphs.some(e => !!(e.name));
+    const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
+    this.setState({
+      glyphs: glyphs,
+      mapperText: mapper,
+      selectedFile: file,
+      files: files
+    });
+  }
+
+  filteredNullGlyph(glyph) {
+    const { xMax, xMin, yMax, yMin } = glyph;
+    return !!xMax || !!xMin || !!yMax || !!yMin;
   }
 
   toHex(unicode) {
@@ -248,37 +284,28 @@ export default class App extends Component {
     return hex;
   } 
 
-  parseMapperGlyphs(glyphs) {
-    const mapperText = glyphs.filter(e=> e.name && e.unicode).map(e=> `  ${e.name}: ${e.unicode},`).join('\n');
+  parseMapper(glyphs) {
+    const mapperText = glyphs.filter(e => !!e.hex).map(e => `  ${e.name}: ${e.hex}`).join(',\n');
     return `{\n${mapperText}\n}`;
   }
 
-  reloadGlyphs(glyphs) {
-    this.setState({
-      glyphs: glyphs,
-      mapperText: this.parseMapperGlyphs(glyphs)
-    });
+  getUnicodeHexs(glyphs) {
+    const hexs = glyphs.map(e => `  ${e.hex}`).join(',\n');
+    return `[\n${hexs}\n]`;
   }
 
-  reloadFiles(files, selectedFile = files[0]) {
-    this.setState({
-      files: files,
-      selectedFile: selectedFile
-    })
-  }
-
-  getGlyphHtml(glyph) {
-    const { svg, name, hex, unicode, index } = glyph;
+  getGlyphHtml(glyph, index) {
+    const { svg, name, hex, unicode } = glyph;
     const glyphTop = index < 3 ? 'glyph-top' : '';
     const glyphLeft = index%3 === 0 ? 'glyph-left' : '';
     return (
       `<div class="glyph ${glyphTop} ${glyphLeft}">
-        <div> ${index} </div>
+        <div> ${index+1} </div>
         <svg class="glyph-svg">          
           ${svg}
         </svg>
-        <p> ${name} </p>
-        <p> ${hex}  /  ${unicode}</p>
+        <p> ${name || ''} </p>
+        <p> ${hex || ''}    /   ${unicode || ''}</p>
       </div>`
     );
   }
@@ -286,26 +313,15 @@ export default class App extends Component {
   getGlyphWrapperHtml(glyphs) {
     return (
       `<div class="warpper">
-        ${glyphs.reduce((pre, cur)=> pre + this.getGlyphHtml(cur),'')}
+        ${glyphs.reduce((pre, cur, index) => pre + this.getGlyphHtml(cur, index),'')}
       </div> 
       ${glyphWrapStyles}
       `
     );
   }
-
-  getStorageFile(success) {
-    AsyncStorage.getItem('FileNameStorageKey').then(filesJosn => {
-      files = JSON.parse(filesJosn);
-      if (files !== null && files.length > 0) {
-        success && success(files);        
-      }
-    });
-  }
-
-  setStorageFile(files) {
-    AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
-  }
 }
+
+const x = []
 
 const fileItemStyles = StyleSheet.create({
   fontFileWrap: {
@@ -389,11 +405,7 @@ const panelStyles = StyleSheet.create({
   },
   fontShow: {
     flex: 1,
-    marginLeft: 0,
-    marginBottom: 0,
-    marginTop: 0,
     flexGrow: 2,
-    backgroundColor: '#0f0'
   },
   mapperView: {
     flex: 1,
