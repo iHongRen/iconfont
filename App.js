@@ -38,17 +38,7 @@ export default class App extends Component {
   }
 
   componentDidMount() {   
-    AsyncStorage.getItem('FileNameStorageKey').then(filesJson => {
-      files = JSON.parse(filesJson);
-      if (files !== null && files.length > 0) {
-        this.parseFile(files[0], files);
-      }
-    });
-  }
-
-  componentWillUnmount() {
-    const files = this.state.files || []
-    AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
+    this.parseFileStorage();
   }
 
   renderAppNameView() {
@@ -194,6 +184,7 @@ export default class App extends Component {
     const deleteIndex = files.indexOf(file);    
     const newFiles = files.filter(e => e != file);
     this.state.glyphsMapperHtmlCaches[file] = null;
+    this.storageFiles(newFiles);
     if (newFiles.length === 0) {
       this.loadFileGlyphs();     
       return; 
@@ -256,6 +247,7 @@ export default class App extends Component {
       
       this.state.glyphsMapperHtmlCaches[file] = { glyphsHtml, mapperHtml, glyphs };        
       this.loadFileGlyphs(file, files, glyphsHtml, mapperHtml);
+      this.storageFiles(files);
     });  
   }
 
@@ -359,6 +351,19 @@ export default class App extends Component {
 
   getDragTip() {
     return this.state.dragOver ? 'Release to load' : 'Drop .ttf files here';
+  }
+
+  parseFileStorage() {
+    AsyncStorage.getItem('FileNameStorageKey').then(filesJson => {
+      const files = JSON.parse(filesJson);
+      if (Array.isArray(files) && files.length > 0) {
+        this.parseFile(files[0], files);
+      }
+    });
+  }
+
+  storageFiles(files) {
+    AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
   }
 }
 
