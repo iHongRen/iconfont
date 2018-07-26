@@ -6,19 +6,23 @@
 
 import React, { Component } from 'react';
 import {
-  Platform,
   StyleSheet,
   Text,
   View,
   WebView,
-  Dimensions,
   ScrollView,
   TouchableOpacity,
   AsyncStorage,
-  TextInput
+  TextInput,
+  MenuManager
 } from 'react-native';
 
 import * as opentype from 'opentype.js';
+
+const AppConfig = {
+  name: 'Iconfont',
+  version: '1.0'
+}
 
 export default class App extends Component {
   constructor(props) {
@@ -26,10 +30,10 @@ export default class App extends Component {
     this.state = {
       dragOver: false,
       files: [],
-      glyphs: [],
-      mapperText: '',
       selectedFile: '',
-      glyphsCaches: {}
+      glyphsHtml: '',
+      mapperHtml: '',
+      glyphsMapperHtmlCaches: {}
     }
   }
 
@@ -43,7 +47,6 @@ export default class App extends Component {
   }
 
   componentWillUnmount() {
-    console.log('componentWillUnmountcomponentWillUnmountcomponentWillUnmountcomponentWillUnmountcomponentWillUnmountcomponentWillUnmount');
     const files = this.state.files || []
     AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
   }
@@ -51,7 +54,7 @@ export default class App extends Component {
   renderAppNameView() {
     return (
       <View style={styles.appNameWrap}>
-        <Text style={styles.appName}>Iconfont 1.0</Text>
+        <Text style={styles.appName}>{AppConfig.name}</Text>
       </View>
     );
   }
@@ -87,7 +90,7 @@ export default class App extends Component {
             const isSelectedColor = e === selectedFile ? 'orange' : '#ddd';
             return (
             <View key={e} style={fileItemStyles.fileItemWrap}>
-              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(e)}>
+              <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(e)}>
                 <View style={[fileItemStyles.fileIconWrap, {borderColor: isSelectedColor}]}>
                   <Text style={{fontSize: 40,  color: isSelectedColor}}>𝐹</Text>
                 </View>
@@ -95,7 +98,7 @@ export default class App extends Component {
                   <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{e.split('/').pop()}</Text>
                 </View>             
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} style={fileItemStyles.fileClose} onPress={() => this.onDeleteFileItem(e)}>
+              <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileClose} onPress={() => this.onDeleteFileItem(e)}>
                 <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
               </TouchableOpacity>                                         
             </View>
@@ -110,31 +113,24 @@ export default class App extends Component {
   renderJsonMapperView() {
     return (
       <View style={panelStyles.mapperView}>
-<ScrollView >
+       <WebView 
+            source={{html: this.state.mapperHtml}} 
+            onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
+            />
+{/* <ScrollView >
         <View style={{flex: 1, backgroundColor: '#fff'}}>
-          <Text style={{flex: 1, backgroundColor: '#fff'}} selectable={true}>
+          <Text style={{flex: 1, backgroundColor: '#fff'}} selectable>
             {this.state.mapperText}
           </Text>
         </View>
-      </ScrollView>
+      </ScrollView> */}
       </View>
-      
-      // <View style={panelStyles.mapperView}>
-      //   <TextInput 
-      //   style={panelStyles.jsonView}
-      //   editable={false}
-      //   multiline
-      //   value={jsonText}
-      //   />
-      // </View> 
     );
   }
 
   renderPanelView() {
-    const { glyphs } = this.state;
-    const { files, dragOver  } = this.state;
+    const { glyphsHtml, dragOver } = this.state;
     const dragColor =  dragOver ? 'orange' :  '#ddd';
-    let html = this.getGlyphWrapperHtml(glyphs);
     return (
       <View style={panelStyles.panelView}>
         <View style={[panelStyles.headerView, {borderColor: dragColor}]}
@@ -148,9 +144,12 @@ export default class App extends Component {
 
         <View style={panelStyles.fontShowView}>         
           <View style={panelStyles.fontShow}>
-            <WebView style={{ flex: 1 }} source={{html:html}} />
+            <WebView 
+            source={{html: glyphsHtml}} 
+            onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
+            />
           </View> 
-          { this.renderJsonMapperView(glyphs) }          
+          { this.renderJsonMapperView() }          
         </View>
       </View>
     );
@@ -159,13 +158,28 @@ export default class App extends Component {
   render() {  
     return (
       <View style={styles.container}> 
-        { this.renderAppNameView() }
+        { this.renderAppNameView() }        
         { (this.state.files.length === 0) ? this.renderDragView() : this.renderPanelView() }
       </View>
     );
   }
 
+  addAboutItem() {
+    MenuManager.addAboutItem();
+  }
+
+  onShouldStartLoadWithRequest = (event) => {
+    // Implement any custom loading logic here, don't forget to return!
+    console.log(event);
+    // make ‘reload’ do nothing
+    if (event.target === 29 || event.target === 33) {     
+      return false;
+    }
+    return true;
+  };
+
   onFileSelected(file) {
+    console.log(file);
     const { files, selectedFile } = this.state;
     if (selectedFile === file) return;
     this.parseFile(file, files);
@@ -178,8 +192,8 @@ export default class App extends Component {
     if (newFiles.length === 0) {
       this.setState({
         files: [],
-        glyphs: [],
-        mapperText: '',
+        glyphsHtml: '',
+        mapperHtml: '',
         selectedFile: '',
       }); 
       return; 
@@ -223,9 +237,10 @@ export default class App extends Component {
   }
 
   parseFile(file, files) {
-    const glyphs = this.state.glyphsCaches[file];
-    if (glyphs) {
-      this.loadFileGlyphs(file, files, glyphs);
+    const glyphsMapper = this.state.glyphsMapperHtmlCaches[file];
+    if (glyphsMapper) {
+      const { glyphsHtml, mapperHtml } = glyphsMapper;
+      this.loadFileGlyphs(file, files, glyphsHtml, mapperHtml);
       return;
     }
 
@@ -236,8 +251,13 @@ export default class App extends Component {
       }
       // console.log(font);
       const glyphs = this.getConfigGlyphs(font.glyphs);
-      this.state.glyphsCaches[file] = glyphs;     
-      this.loadFileGlyphs(file, files, glyphs);
+      const hasNames = glyphs.some(e => !!(e.name));
+      const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
+      const mapperHtml = this.getMapperHtml(mapper);
+      const glyphsHtml = this.getGlyphWrapperHtml(glyphs);
+      
+      this.state.glyphsMapperHtmlCaches[file] = { glyphsHtml, mapperHtml, glyphs };        
+      this.loadFileGlyphs(file, files, glyphsHtml, mapperHtml);
     });  
   }
 
@@ -255,16 +275,14 @@ export default class App extends Component {
     return glyphs;
   }
 
-  loadFileGlyphs(file, files, glyphs) {
+  loadFileGlyphs(file, files, glyphsHtml, mapperHtml) {
     console.log(file);
     console.log(files);
-    // console.log(glyphs);
+    console.log(mapperHtml);
 
-    const hasNames = glyphs.some(e => !!(e.name));
-    const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
     this.setState({
-      glyphs: glyphs,
-      mapperText: mapper,
+      glyphsHtml: glyphsHtml,
+      mapperHtml: mapperHtml,
       selectedFile: file,
       files: files
     });
@@ -285,13 +303,14 @@ export default class App extends Component {
   } 
 
   parseMapper(glyphs) {
-    const mapperText = glyphs.filter(e => !!e.hex).map(e => `  ${e.name}: ${e.hex}`).join(',\n');
-    return `{\n${mapperText}\n}`;
+    return glyphs.filter(e => !!e.name && !!e.hex).reduce((prev, cur) => {
+       prev[cur.name] = cur.hex;
+       return prev;
+    },{});
   }
 
   getUnicodeHexs(glyphs) {
-    const hexs = glyphs.map(e => `  ${e.hex}`).join(',\n');
-    return `[\n${hexs}\n]`;
+    return glyphs.filter(e => !!e.hex).map(e => e.hex);
   }
 
   getGlyphHtml(glyph, index) {
@@ -313,15 +332,35 @@ export default class App extends Component {
   getGlyphWrapperHtml(glyphs) {
     return (
       `<div class="warpper">
-        ${glyphs.reduce((pre, cur, index) => pre + this.getGlyphHtml(cur, index),'')}
+        ${glyphs.reduce((prev, cur, index) => prev + this.getGlyphHtml(cur, index),'')}
       </div> 
-      ${glyphWrapStyles}
-      `
+      ${glyphWrapStyles}`
     );
   }
-}
 
-const x = []
+  getMapperHtml(mapper) {
+    return `<pre class='mapper'>${this.syntaxHighlight(mapper)}</pre>${JsonStyles}`;
+  }
+
+  syntaxHighlight(json) {
+    if (typeof json != 'string') {
+      json = JSON.stringify(json, undefined, 2);
+    }
+    json = json.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+    const regx = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g;
+    return json.replace(regx, (match) => {
+      let cls = 'number';
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'key' : 'string';         
+      } else if (/true|false/.test(match)) {
+        cls = 'boolean';
+      } else if (/null/.test(match)) {
+        cls = 'null';
+      }
+      return `<span class=${cls}> ${match}</span>`;
+    });
+  }
+}
 
 const fileItemStyles = StyleSheet.create({
   fontFileWrap: {
@@ -364,21 +403,21 @@ const fileItemStyles = StyleSheet.create({
   },
   fileClose: {
     alignSelf: 'flex-end',
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',  
-    backgroundColor: '#000',
+    backgroundColor: '#333',
     position: 'absolute',
-    right: 0,
+    right: 1,
     top: 0,
-    borderRadius: 10,
+    borderRadius: 9,
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: '#fff',
   },
   fileCloseIcon: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#fff'
   },  
 });
@@ -411,16 +450,24 @@ const panelStyles = StyleSheet.create({
     flex: 1,
     flexGrow: 1,
     marginLeft: 15,
-    marginTop: 0,
-    marginBottom: 0,
-    flexWrap: 'wrap',
-    paddingVertical: 10,
   },
+  // jsonView: {
+  //   color: 'orange',
+  //   fontSize: 15,
+  //   height: 100,
+  //   maxHeight: 200, 
+  //   width: 300, 
+  //   backgroundColor: 'green'  
+  // },
   jsonView: {
-    color: 'orange',
-    fontSize: 15,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    flex: 1,
+    fontSize: 13,
     height: 150,
-  }
+    padding: 40,
+    marginBottom: 4,
+  },
 });
 
 const styles = StyleSheet.create({
@@ -445,21 +492,17 @@ const styles = StyleSheet.create({
   }
 });
 
-const glyphWrapStyles = `
-<style> 
+const glyphWrapStyles = 
+`<style> 
   .glyph {
     padding: 10px 15px 10px 15px;
     width: 33.333333%;
     border-bottom: 1px solid lightgray;
     border-right: 1px solid lightgray; 
-    -webkit-box-sizing:border-box;     
+    -webkit-box-sizing:border-box;
   }
-  .glyph-top {
-    border-top: 1px solid lightgray; 
-  }
-  .glyph-left {
-    border-left: 1px solid lightgray; 
-  }  
+  .glyph-top { border-top: 1px solid lightgray; }
+  .glyph-left { border-left: 1px solid lightgray; }  
   .glyph-svg {
     margin-top: 10px;
     width: 50px;
@@ -469,6 +512,20 @@ const glyphWrapStyles = `
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+  p {
+    white-space: nowrap;
+    text-overflow: ellipsis; 
+    overflow: hidden;     
   }        
-</style>
-`;
+</style>`;
+
+const JsonStyles = 
+`<style>
+  .mapper { padding: 5px; margin: 5px; }
+  .string { color: green; }
+  .number { color: darkorange; }
+  .boolean { color: blue; }
+  .null { color: magenta; }
+  .key { color: red; }
+</style>`;
