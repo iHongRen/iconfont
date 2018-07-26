@@ -13,8 +13,7 @@ import {
   ScrollView,
   TouchableOpacity,
   AsyncStorage,
-  TextInput,
-  MenuManager
+  MenuManager,
 } from 'react-native';
 
 import * as opentype from 'opentype.js';
@@ -29,6 +28,7 @@ export default class App extends Component {
     super(props);
     this.state = {
       dragOver: false,
+      mouseOver: false,
       files: [],
       selectedFile: '',
       glyphsHtml: '',
@@ -60,34 +60,41 @@ export default class App extends Component {
   }
 
   renderDragView() {
-    const { files, dragOver  } = this.state;
-    const dragColor =  dragOver ? 'orange' : '#333';
+    const {  dragOver, mouseOver  } = this.state;
+    const dragColor =  (dragOver || mouseOver) ? '#333' : 'gray';
     return (
       <View
         style={[styles.fullDragView]}
         draggedTypes={['NSFilenamesPboardType']}
         onDragEnter={() => this.setState({dragOver: true})}
         onDragLeave={() => this.setState({dragOver: false})}
-        onDrop={(e) => this.onDrop(e)}>
-        <Text style={{fontSize: 14, color: dragColor }}>
-          {files.length > 0 ? files : 'Drop .ttf files here'}
-        </Text>               
+        onDrop={(e) => this.onDrop(e)}
+      >
+        <View   
+          onMouseEnter={() => this.setState({mouseOver: true})}
+          onMouseLeave={() => this.setState({mouseOver: false})}
+          onDragEnter={() => this.setState({dragOver: true})}
+          onDragLeave={() => this.setState({dragOver: false})}
+          onDrop={(e) => this.onDrop(e)}
+        >
+          <Text style={{fontSize: 20, color: dragColor }}>{ this.getDragTip() }</Text>               
+        </View>
       </View>
     );
   }
 
   renderFontFileView() {
-    const { files, selectedFile, dragOver } = this.state;
-    const dragColor =  dragOver ? 'orange' :  '#ddd';
+    const { files, selectedFile, dragOver, mouseOver } = this.state;
+    const dragColor =  (dragOver || mouseOver) ? '#333' :  '#ddd';
     return (
       <ScrollView 
       horizontal  
       style={fileItemStyles.fontFileWrap}
-      contentContainerStyle={fileItemStyles.fontFileContainerItem} 
+      contentContainerStyle={{alignItems: 'center'}} 
       >
         {
           files.map(e => { 
-            const isSelectedColor = e === selectedFile ? 'orange' : '#ddd';
+            const isSelectedColor = e === selectedFile ? '#333' : '#ccc';
             return (
             <View key={e} style={fileItemStyles.fileItemWrap}>
               <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(e)}>
@@ -98,14 +105,20 @@ export default class App extends Component {
                   <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{e.split('/').pop()}</Text>
                 </View>             
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileClose} onPress={() => this.onDeleteFileItem(e)}>
+              <TouchableOpacity activeOpacity={0.6} style={[fileItemStyles.fileClose, {backgroundColor: isSelectedColor}]} onPress={() => this.onDeleteFileItem(e)}>
                 <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
               </TouchableOpacity>                                         
             </View>
             )}
           )        
         }
-        <Text style={{ color: dragColor, marginLeft: 20 }}>Drop .ttf files here</Text>
+         <View
+          style={{marginLeft: 20}}   
+          onMouseEnter={() => this.setState({mouseOver: true})}
+          onMouseLeave={() => this.setState({mouseOver: false})}
+        >
+          <Text style={{color: dragColor}}>{ this.getDragTip()}</Text>
+        </View>
       </ScrollView>
     );    
   }
@@ -114,16 +127,9 @@ export default class App extends Component {
     return (
       <View style={panelStyles.mapperView}>
        <WebView 
-            source={{html: this.state.mapperHtml}} 
-            onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
-            />
-{/* <ScrollView >
-        <View style={{flex: 1, backgroundColor: '#fff'}}>
-          <Text style={{flex: 1, backgroundColor: '#fff'}} selectable>
-            {this.state.mapperText}
-          </Text>
-        </View>
-      </ScrollView> */}
+          source={{html: this.state.mapperHtml}} 
+          onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
+        />
       </View>
     );
   }
@@ -132,7 +138,7 @@ export default class App extends Component {
     const { glyphsHtml, dragOver } = this.state;
     const dragColor =  dragOver ? 'orange' :  '#ddd';
     return (
-      <View style={panelStyles.panelView}>
+      <View style={{flex: 1}}>
         <View style={[panelStyles.headerView, {borderColor: dragColor}]}
             draggedTypes={['NSFilenamesPboardType']}
             onDragEnter={() => this.setState({dragOver: true})}
@@ -141,12 +147,11 @@ export default class App extends Component {
           >
           { this.renderFontFileView() }
         </View>
-
         <View style={panelStyles.fontShowView}>         
           <View style={panelStyles.fontShow}>
             <WebView 
-            source={{html: glyphsHtml}} 
-            onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
+              source={{html: glyphsHtml}} 
+              onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
             />
           </View> 
           { this.renderJsonMapperView() }          
@@ -159,7 +164,7 @@ export default class App extends Component {
     return (
       <View style={styles.container}> 
         { this.renderAppNameView() }        
-        { (this.state.files.length === 0) ? this.renderDragView() : this.renderPanelView() }
+        { this.state.files.length === 0 ? this.renderDragView() : this.renderPanelView() }
       </View>
     );
   }
@@ -169,7 +174,6 @@ export default class App extends Component {
   }
 
   onShouldStartLoadWithRequest = (event) => {
-    // Implement any custom loading logic here, don't forget to return!
     console.log(event);
     // make ‘reload’ do nothing
     if (event.target === 29 || event.target === 33) {     
@@ -189,13 +193,9 @@ export default class App extends Component {
     const { files, selectedFile } = this.state;
     const deleteIndex = files.indexOf(file);    
     const newFiles = files.filter(e => e != file);
+    this.state.glyphsMapperHtmlCaches[file] = null;
     if (newFiles.length === 0) {
-      this.setState({
-        files: [],
-        glyphsHtml: '',
-        mapperHtml: '',
-        selectedFile: '',
-      }); 
+      this.loadFileGlyphs();     
       return; 
     }
 
@@ -217,11 +217,9 @@ export default class App extends Component {
   }
 
   onDrop(e) {
-    this.setState({
-      dragOver: false
-    });
-
     console.log(e.nativeEvent);
+    this.setState({ dragOver: false });
+
     let files = e.nativeEvent.files;
     files = this.filteredTTFFiles(files);
 
@@ -249,7 +247,7 @@ export default class App extends Component {
         console.warn(err);
         return;
       }
-      // console.log(font);
+
       const glyphs = this.getConfigGlyphs(font.glyphs);
       const hasNames = glyphs.some(e => !!(e.name));
       const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
@@ -275,15 +273,15 @@ export default class App extends Component {
     return glyphs;
   }
 
-  loadFileGlyphs(file, files, glyphsHtml, mapperHtml) {
-    console.log(file);
+  loadFileGlyphs(selectedFile = '', files = [], glyphsHtml = '', mapperHtml = '') {
+    console.log(selectedFile);
     console.log(files);
     console.log(mapperHtml);
 
     this.setState({
       glyphsHtml: glyphsHtml,
       mapperHtml: mapperHtml,
-      selectedFile: file,
+      selectedFile: selectedFile,
       files: files
     });
   }
@@ -339,16 +337,14 @@ export default class App extends Component {
   }
 
   getMapperHtml(mapper) {
-    return `<pre class='mapper'>${this.syntaxHighlight(mapper)}</pre>${JsonStyles}`;
+    let jsonText = JSON.stringify(mapper, undefined, 2);
+    return `<pre class='mapper'>${this.syntaxHighlight(jsonText)}</pre>${JsonStyles}`;
   }
 
-  syntaxHighlight(json) {
-    if (typeof json != 'string') {
-      json = JSON.stringify(json, undefined, 2);
-    }
-    json = json.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+  syntaxHighlight(jsonText) {
+    let text = jsonText.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
     const regx = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g;
-    return json.replace(regx, (match) => {
+    return text.replace(regx, (match) => {
       let cls = 'number';
       if (/^"/.test(match)) {
         cls = /:$/.test(match) ? 'key' : 'string';         
@@ -357,8 +353,12 @@ export default class App extends Component {
       } else if (/null/.test(match)) {
         cls = 'null';
       }
-      return `<span class=${cls}> ${match}</span>`;
+      return `<span class=${cls}>${match}</span>`;
     });
+  }
+
+  getDragTip() {
+    return this.state.dragOver ? 'Release to load' : 'Drop .ttf files here';
   }
 }
 
@@ -366,9 +366,6 @@ const fileItemStyles = StyleSheet.create({
   fontFileWrap: {
     flex: 1,
     marginHorizontal: 10,   
-  },
-  fontFileContainerItem: {
-    alignItems: 'center',
   },
   fileItemWrap: {
     width: 100,
@@ -388,8 +385,9 @@ const fileItemStyles = StyleSheet.create({
     marginTop: 5
   },
   fileIcon: {
-    borderColor: '#ddd',
-    borderWidth: 1,
+    borderColor: 'gray',
+    borderWidth: 2,
+    borderStyle: 'solid',
     fontSize: 15
   },
   fileNameWrap: {
@@ -407,7 +405,7 @@ const fileItemStyles = StyleSheet.create({
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',  
-    backgroundColor: '#333',
+    // backgroundColor: '#333',
     position: 'absolute',
     right: 1,
     top: 0,
@@ -417,15 +415,12 @@ const fileItemStyles = StyleSheet.create({
     borderColor: '#fff',
   },
   fileCloseIcon: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#fff'
   },  
 });
 
-const panelStyles = StyleSheet.create({
-  panelView: {
-    flex: 1,
-  },
+const panelStyles = StyleSheet.create({ 
   headerView: {
     marginTop: 0,
     marginHorizontal: 15,
@@ -450,31 +445,13 @@ const panelStyles = StyleSheet.create({
     flex: 1,
     flexGrow: 1,
     marginLeft: 15,
-  },
-  // jsonView: {
-  //   color: 'orange',
-  //   fontSize: 15,
-  //   height: 100,
-  //   maxHeight: 200, 
-  //   width: 300, 
-  //   backgroundColor: 'green'  
-  // },
-  jsonView: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    flex: 1,
-    fontSize: 13,
-    height: 150,
-    padding: 40,
-    marginBottom: 4,
-  },
+  }
 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5FCFF',
-    overflow: 'hidden'
+    backgroundColor: '#f5fcff',
   },
   appNameWrap: {
     justifyContent: 'center',
