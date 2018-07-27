@@ -75,7 +75,7 @@ export default class App extends Component {
 
   renderFontFileView() {
     const { files, selectedFile, dragOver, mouseOver } = this.state;
-    const dragColor =  (dragOver || mouseOver) ? '#333' :  '#ddd';
+    const dragColor =  (dragOver || mouseOver) ? '#333' :  '#bbb';
     return (
       <ScrollView 
       horizontal  
@@ -84,7 +84,7 @@ export default class App extends Component {
       >
         {
           files.map(e => { 
-            const isSelectedColor = e === selectedFile ? '#333' : '#ccc';
+            const isSelectedColor = e === selectedFile ? '#333' : '#bbb';
             return (
             <View key={e} style={fileItemStyles.fileItemWrap}>
               <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(e)}>
@@ -126,11 +126,13 @@ export default class App extends Component {
 
   renderPanelView() {
     const { glyphsHtml, dragOver } = this.state;
-    const dragColor =  dragOver ? 'orange' :  '#ddd';
+    const dragColor =  dragOver ? '#bbb' : '#fff';
+
     return (
       <View style={{flex: 1}}>
-        <View style={[panelStyles.headerView, {borderColor: dragColor}]}
-            draggedTypes={['NSFilenamesPboardType']}
+        <View></View>
+        <View style={[panelStyles.fileHeaderView, {borderColor: dragColor}]}
+            draggedTypes={['NSFilenamesPboardType']}         
             onDragEnter={() => this.setState({dragOver: true})}
             onDragLeave={() => this.setState({dragOver: false})}
             onDrop={(e) => this.onDrop(e)}
@@ -165,11 +167,7 @@ export default class App extends Component {
 
   onShouldStartLoadWithRequest = (event) => {
     console.log(event);
-    // make ‘reload’ do nothing
-    if (event.target === 29 || event.target === 33) {     
-      return false;
-    }
-    return true;
+    return false;
   };
 
   onFileSelected(file) {
@@ -350,7 +348,7 @@ export default class App extends Component {
   }
 
   getDragTip() {
-    return this.state.dragOver ? 'Release to load' : 'Drop .ttf files here';
+    return this.state.dragOver ? 'Release to open' : 'Drop .ttf files here';
   }
 
   parseFileStorage() {
@@ -385,15 +383,10 @@ const fileItemStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
+    borderStyle: 'solid',
     width: 80,
     height: 100,
     marginTop: 5
-  },
-  fileIcon: {
-    borderColor: 'gray',
-    borderWidth: 2,
-    borderStyle: 'solid',
-    fontSize: 15
   },
   fileNameWrap: {
     justifyContent: 'center',
@@ -410,7 +403,6 @@ const fileItemStyles = StyleSheet.create({
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',  
-    // backgroundColor: '#333',
     position: 'absolute',
     right: 1,
     top: 0,
@@ -426,14 +418,14 @@ const fileItemStyles = StyleSheet.create({
 });
 
 const panelStyles = StyleSheet.create({ 
-  headerView: {
-    marginTop: 0,
+  fileHeaderView: {
     marginHorizontal: 15,
     flexDirection: 'row',
+    borderWidth: 2,
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderColor: 'red',
     height: 150,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
   fontShowView: {
     flex: 1,
@@ -456,7 +448,7 @@ const panelStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5fcff',
+    backgroundColor: '#f3f3f3',
   },
   appNameWrap: {
     justifyContent: 'center',
