@@ -13,6 +13,8 @@ import {
   ScrollView,
   TouchableOpacity,
   AsyncStorage,
+  Clipboard,
+  Button,
   MenuManager,
 } from 'react-native';
 
@@ -33,7 +35,7 @@ export default class App extends Component {
       selectedFile: '',
       glyphsHtml: '',
       mapperHtml: '',
-      glyphsMapperHtmlCaches: {}
+      glyphsMapperCaches: {}
     }
   }
 
@@ -116,6 +118,14 @@ export default class App extends Component {
   renderJsonMapperView() {
     return (
       <View style={panelStyles.mapperView}>
+      <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
+        <Button
+          style={{ width: 60, height: 25, }}
+          title={'copy'}
+          bezelStyle={'rounded'}
+          onPress={() => alert(`clicked`)}
+        />
+      </View>
        <WebView 
           source={{html: this.state.mapperHtml}} 
           onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
@@ -165,6 +175,10 @@ export default class App extends Component {
     MenuManager.addAboutItem();
   }
 
+  onCopyMapper(jsonText) {
+    Clipboard.setString(jsonText);
+  }
+
   onShouldStartLoadWithRequest = (event) => {
     console.log(event);
     return false;
@@ -181,7 +195,7 @@ export default class App extends Component {
     const { files, selectedFile } = this.state;
     const deleteIndex = files.indexOf(file);    
     const newFiles = files.filter(e => e != file);
-    this.state.glyphsMapperHtmlCaches[file] = null;
+    this.state.glyphsMapperCaches[file] = null;
     this.storageFiles(newFiles);
     if (newFiles.length === 0) {
       this.loadFileGlyphs();     
@@ -224,10 +238,10 @@ export default class App extends Component {
   }
 
   parseFile(file, files) {
-    const glyphsMapper = this.state.glyphsMapperHtmlCaches[file];
+    const glyphsMapper = this.state.glyphsMapperCaches[file];
     if (glyphsMapper) {
-      const { glyphsHtml, mapperHtml } = glyphsMapper;
-      this.loadFileGlyphs(file, files, glyphsHtml, mapperHtml);
+      const { glyphs, mapper } = glyphsMapper;
+      this.loadFileGlyphs(file, files, glyphs, mapper);
       return;
     }
 
@@ -240,12 +254,12 @@ export default class App extends Component {
       const glyphs = this.getConfigGlyphs(font.glyphs);
       const hasNames = glyphs.some(e => !!(e.name));
       const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
-      const mapperHtml = this.getMapperHtml(mapper);
-      const glyphsHtml = this.getGlyphWrapperHtml(glyphs);
       
-      this.state.glyphsMapperHtmlCaches[file] = { glyphsHtml, mapperHtml, glyphs };        
-      this.loadFileGlyphs(file, files, glyphsHtml, mapperHtml);
+      this.state.glyphsMapperCaches[file] = { glyphs, mapper };        
+      this.loadFileGlyphs(file, files, glyphs, mapper);
       this.storageFiles(files);
+
+      console.log(this.state.glyphsMapperCaches);
     });  
   }
 
@@ -255,19 +269,22 @@ export default class App extends Component {
       let glyph = fontGlyphs.get(i);
       if(this.filteredNullGlyph(glyph)) {
         let path = glyph.getPath(0, 40, 40);
-        glyph.svg = path.toSVG();
-        glyph.hex = this.toHex(glyph.unicode);
-        glyphs.push(glyph); 
+
+        let myGlyph = {};
+        myGlyph.svg = path.toSVG();
+        myGlyph.hex = this.toHex(glyph.unicode);
+        myGlyph.name = glyph.name;
+        glyphs.push(myGlyph); 
       }        
     }
     return glyphs;
   }
 
-  loadFileGlyphs(selectedFile = '', files = [], glyphsHtml = '', mapperHtml = '') {
+  loadFileGlyphs(selectedFile = '', files = [], glyphs = [], mapper = {}) {
     console.log(selectedFile);
     console.log(files);
-    console.log(mapperHtml);
-
+    const mapperHtml = this.getMapperHtml(mapper);
+    const glyphsHtml = this.getGlyphWrapperHtml(glyphs);
     this.setState({
       glyphsHtml: glyphsHtml,
       mapperHtml: mapperHtml,
@@ -292,7 +309,7 @@ export default class App extends Component {
 
   parseMapper(glyphs) {
     return glyphs.filter(e => !!e.name && !!e.hex).reduce((prev, cur) => {
-       prev[cur.name] = cur.hex;
+       prev[cur.name] = `${cur.hex}`;
        return prev;
     },{});
   }
@@ -302,17 +319,20 @@ export default class App extends Component {
   }
 
   getGlyphHtml(glyph, index) {
-    const { svg, name, hex, unicode } = glyph;
+    const { svg, name, hex } = glyph;
     const glyphTop = index < 3 ? 'glyph-top' : '';
     const glyphLeft = index%3 === 0 ? 'glyph-left' : '';
+    const hexu = !!hex ? `\\u${hex}`: '';
+    const hexx = !!hex ? `&#x${hex};` : '';
     return (
       `<div class="glyph ${glyphTop} ${glyphLeft}">
-        <div> ${index+1} </div>
+        <div>${index+1}</div>
         <svg class="glyph-svg">          
           ${svg}
         </svg>
-        <p> ${name || ''} </p>
-        <p> ${hex || ''}    /   ${unicode || ''}</p>
+        <p>${name || ''}</p>
+        <code>${hexu}</code>
+        <xmp>${hexx}</xmp>
       </div>`
     );
   }
@@ -326,8 +346,8 @@ export default class App extends Component {
     );
   }
 
-  getMapperHtml(mapper) {
-    let jsonText = JSON.stringify(mapper, undefined, 2);
+  getMapperHtml(mapper) {   
+    let jsonText = JSON.stringify(mapper, null, 2);
     return `<pre class='mapper'>${this.syntaxHighlight(jsonText)}</pre>${JsonStyles}`;
   }
 
@@ -337,7 +357,9 @@ export default class App extends Component {
     return text.replace(regx, (match) => {
       let cls = 'number';
       if (/^"/.test(match)) {
-        cls = /:$/.test(match) ? 'key' : 'string';         
+        const isKey = /:$/.test(match);
+        cls = isKey ? 'key' : 'string'; 
+        match = isKey ? match : '\"\\u' + match.replace('\"','');       
       } else if (/true|false/.test(match)) {
         cls = 'boolean';
       } else if (/null/.test(match)) {
@@ -442,6 +464,7 @@ const panelStyles = StyleSheet.create({
     flex: 1,
     flexGrow: 1,
     marginLeft: 15,
+    backgroundColor: '#fff'
   }
 });
 
@@ -501,5 +524,5 @@ const JsonStyles =
   .number { color: darkorange; }
   .boolean { color: blue; }
   .null { color: magenta; }
-  .key { color: red; }
+  .key { color: #CD2626; }
 </style>`;
