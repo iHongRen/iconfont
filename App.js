@@ -35,7 +35,7 @@ export default class App extends Component {
       selectedFile: '',
       glyphsHtml: '',
       mapperHtml: '',
-      glyphsMapperCaches: {}
+      glyphsMapperCaches: {},
     }
   }
 
@@ -80,9 +80,10 @@ export default class App extends Component {
     const dragColor =  (dragOver || mouseOver) ? '#333' :  '#bbb';
     return (
       <ScrollView 
-      horizontal  
+      horizontal 
+      showsHorizontalScrollIndicator={ files.length > 5 }
       style={fileItemStyles.fontFileWrap}
-      contentContainerStyle={{alignItems: 'center'}} 
+      contentContainerStyle={{alignItems: 'center', justifyContent: 'center'}} 
       >
         {
           files.map(e => { 
@@ -123,7 +124,7 @@ export default class App extends Component {
           style={{ width: 60, height: 25, }}
           title={'copy'}
           bezelStyle={'rounded'}
-          onPress={() => alert(`clicked`)}
+          onPress={() => this.onCopyMapper()}
         />
       </View>
        <WebView 
@@ -135,13 +136,13 @@ export default class App extends Component {
   }
 
   renderPanelView() {
-    const { glyphsHtml, dragOver } = this.state;
+    const { glyphsHtml, dragOver, files } = this.state;
     const dragColor =  dragOver ? '#bbb' : '#fff';
-
+    const fileHeight = files.length > 5 ? 165 : 150;
     return (
       <View style={{flex: 1}}>
         <View></View>
-        <View style={[panelStyles.fileHeaderView, {borderColor: dragColor}]}
+        <View style={[panelStyles.fileHeaderView, {borderColor: dragColor, height: fileHeight}]}
             draggedTypes={['NSFilenamesPboardType']}         
             onDragEnter={() => this.setState({dragOver: true})}
             onDragLeave={() => this.setState({dragOver: false})}
@@ -175,8 +176,14 @@ export default class App extends Component {
     MenuManager.addAboutItem();
   }
 
-  onCopyMapper(jsonText) {
-    Clipboard.setString(jsonText);
+  onCopyMapper() {
+    const glyphsMapper = this.state.glyphsMapperCaches[this.state.selectedFile];
+    if (glyphsMapper) {
+      const { mapper } = glyphsMapper;      
+      let text = this.getMapperJsonText(mapper);
+      Clipboard.setString(text);        
+      console.log(text);
+    }
   }
 
   onShouldStartLoadWithRequest = (event) => {
@@ -347,8 +354,19 @@ export default class App extends Component {
   }
 
   getMapperHtml(mapper) {   
-    let jsonText = JSON.stringify(mapper, null, 2);
+    let jsonText = this.getMapperJsonText(mapper);
     return `<pre class='mapper'>${this.syntaxHighlight(jsonText)}</pre>${JsonStyles}`;
+  }
+
+  getMapperJsonText(mapper) {
+    let jsonText = JSON.stringify(mapper, null, 2);
+    let text = '';
+    if (Array.isArray(mapper)) {
+      text = jsonText.replace(/ "/g, " \"\\u");
+    } else {
+      text = jsonText.replace(/: "/g, ": \"\\u");
+    }
+    return text;
   }
 
   syntaxHighlight(jsonText) {
@@ -359,7 +377,7 @@ export default class App extends Component {
       if (/^"/.test(match)) {
         const isKey = /:$/.test(match);
         cls = isKey ? 'key' : 'string'; 
-        match = isKey ? match : '\"\\u' + match.replace('\"','');       
+        // match = isKey ? match : '\"\\u' + match.replace('\"','');       
       } else if (/true|false/.test(match)) {
         cls = 'boolean';
       } else if (/null/.test(match)) {
@@ -394,6 +412,7 @@ const fileItemStyles = StyleSheet.create({
   },
   fileItemWrap: {
     width: 100,
+    height: 130,
     marginRight: 15,
     marginTop: 10
   },  
@@ -446,7 +465,6 @@ const panelStyles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'solid',
     borderColor: 'red',
-    height: 150,
     backgroundColor: '#fff',
   },
   fontShowView: {
