@@ -119,15 +119,15 @@ export default class App extends Component {
   renderJsonMapperView() {
     return (
       <View style={panelStyles.mapperView}>
-      <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
-        <Button
-          style={{ width: 60, height: 25, }}
-          title={'copy'}
-          bezelStyle={'rounded'}
-          onPress={() => this.onCopyMapper()}
-        />
-      </View>
-       <WebView 
+        <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
+          <Button
+            style={{ width: 60, height: 25, marginRight: 10}}
+            title={'copy'}
+            bezelStyle={'rounded'}
+            onPress={() => this.onCopyMapper()}
+          />
+        </View>
+        <WebView
           source={{html: this.state.mapperHtml}} 
           onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
         />
@@ -257,7 +257,7 @@ export default class App extends Component {
         console.warn(err);
         return;
       }
-
+      console.log(font);
       const glyphs = this.getConfigGlyphs(font.glyphs);
       const hasNames = glyphs.some(e => !!(e.name));
       const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
@@ -375,9 +375,7 @@ export default class App extends Component {
     return text.replace(regx, (match) => {
       let cls = 'number';
       if (/^"/.test(match)) {
-        const isKey = /:$/.test(match);
-        cls = isKey ? 'key' : 'string'; 
-        // match = isKey ? match : '\"\\u' + match.replace('\"','');       
+        cls = /:$/.test(match) ? 'key' : 'string'; 
       } else if (/true|false/.test(match)) {
         cls = 'boolean';
       } else if (/null/.test(match)) {
