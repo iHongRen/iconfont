@@ -14,7 +14,8 @@ import {
   TouchableOpacity,
   AsyncStorage,
   Clipboard,
-  Button
+  Button,
+  ActivityIndicator
 } from 'react-native';
 
 import * as opentype from 'opentype.js';
@@ -37,6 +38,7 @@ export default class App extends Component {
       glyphsMapperCaches: {},
       copyButtonTitle: 'copy',
       parseErrorText: '',
+      loading: false,
     }
   }
 
@@ -47,7 +49,11 @@ export default class App extends Component {
   renderAppNameView() {
     return (
       <View style={styles.appNameWrap}>
-        <Text style={styles.appName}>{AppConfig.name}</Text>
+        <ActivityIndicator
+          animating={this.state.loading}
+          style={{marginRight: 10}}
+        />
+        <Text style={styles.appName}>{AppConfig.name}</Text>        
       </View>
     );
   }
@@ -256,6 +262,7 @@ export default class App extends Component {
   }
 
   parseFile(file, files) {
+    this.setState({ loading: true });
     const glyphsMapper = this.state.glyphsMapperCaches[file];
     if (glyphsMapper) {
       const { glyphs, mapper } = glyphsMapper;
@@ -268,6 +275,7 @@ export default class App extends Component {
         // console.warn(err);
         this.setState({ parseErrorText: err.message });
         setTimeout(() => { this.setState({ parseErrorText: '' }); }, 3000);
+        this.setState({ loading: false });
         return;
       }
       const glyphs = this.getConfigGlyphs(font.glyphs);
@@ -305,6 +313,10 @@ export default class App extends Component {
       mapperHtml: mapperHtml,
       selectedFile: selectedFile,
       files: files
+    }, ()=> {
+      if(this.state.loading) {
+        this.setState({ loading: false });
+      }
     });
   }
 
@@ -498,6 +510,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f3f3',
   },
   appNameWrap: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center'
   },
