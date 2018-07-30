@@ -62,14 +62,20 @@
 
 - (void)setUpApplicationMenu
 {
-  NSMenuItem *containerItem = [[NSMenuItem alloc] init];
-  NSMenu *rootMenu = [[NSMenu alloc] initWithTitle:@"" ];
+  NSMenuItem *containerItem = [NSMenuItem new];
+  NSMenu *rootMenu = [[NSMenu alloc] initWithTitle:@""];
   [containerItem setSubmenu:rootMenu];
+  [rootMenu addItemWithTitle:@"About iconfont" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
   [rootMenu addItemWithTitle:@"Quit iconfont" action:@selector(terminate:) keyEquivalent:@"q"];
+  
   [[NSApp mainMenu] addItem:containerItem];
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication * __unused)theApplication {
+  return YES;
+}
+
+- (BOOL)application:(NSApplication *)sender openFile:(NSString *)filename {
   return YES;
 }
 

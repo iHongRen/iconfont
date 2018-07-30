@@ -14,14 +14,13 @@ import {
   TouchableOpacity,
   AsyncStorage,
   Clipboard,
-  Button,
-  MenuManager,
+  Button
 } from 'react-native';
 
 import * as opentype from 'opentype.js';
 
 const AppConfig = {
-  name: 'Iconfont',
+  name: 'iconfont',
   version: '1.0'
 }
 
@@ -36,6 +35,8 @@ export default class App extends Component {
       glyphsHtml: '',
       mapperHtml: '',
       glyphsMapperCaches: {},
+      copyButtonTitle: 'copy',
+      parseErrorText: '',
     }
   }
 
@@ -122,7 +123,7 @@ export default class App extends Component {
         <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
           <Button
             style={{ width: 60, height: 25, marginRight: 10}}
-            title={'copy'}
+            title={this.state.copyButtonTitle}
             bezelStyle={'rounded'}
             onPress={() => this.onCopyMapper()}
           />
@@ -163,36 +164,47 @@ export default class App extends Component {
     );
   }
 
+  renderWarnBox() {
+    return (
+      <View style={{ backgroundColor: '#f9bd4b', height: 44, alignItems: 'center', justifyContent: 'center', position: 'absolute', bottom: 0, left: 0, right: 0}}>
+        <Text style={{ color: 'white', textAlign: 'center',  fontSize: 16}}>{this.state.parseErrorText}</Text>
+      </View>
+    );
+  }
+
   render() {  
     return (
       <View style={styles.container}> 
         { this.renderAppNameView() }        
         { this.state.files.length === 0 ? this.renderDragView() : this.renderPanelView() }
+        { !!this.state.parseErrorText && this.renderWarnBox() }
       </View>
     );
   }
 
-  addAboutItem() {
-    MenuManager.addAboutItem();
-  }
-
-  onCopyMapper() {
+  onCopyMapper() {   
     const glyphsMapper = this.state.glyphsMapperCaches[this.state.selectedFile];
     if (glyphsMapper) {
       const { mapper } = glyphsMapper;      
       let text = this.getMapperJsonText(mapper);
       Clipboard.setString(text);        
-      console.log(text);
+      this.setState({
+        copyButtonTitle: '✓'
+      })
+      
+      setTimeout(() => {
+        this.setState({
+          copyButtonTitle: 'copy'
+        })
+      }, 1000);
     }
   }
 
   onShouldStartLoadWithRequest = (event) => {
-    console.log(event);
     return false;
   };
 
   onFileSelected(file) {
-    console.log(file);
     const { files, selectedFile } = this.state;
     if (selectedFile === file) return;
     this.parseFile(file, files);
@@ -227,7 +239,6 @@ export default class App extends Component {
   }
 
   onDrop(e) {
-    console.log(e.nativeEvent);
     this.setState({ dragOver: false });
 
     let files = e.nativeEvent.files;
@@ -254,10 +265,11 @@ export default class App extends Component {
 
     opentype.load(file, (err, font) => {
       if (err) {
-        console.warn(err);
+        // console.warn(err);
+        this.setState({ parseErrorText: err.message });
+        setTimeout(() => { this.setState({ parseErrorText: '' }); }, 3000);
         return;
       }
-      console.log(font);
       const glyphs = this.getConfigGlyphs(font.glyphs);
       const hasNames = glyphs.some(e => !!(e.name));
       const mapper = hasNames ? this.parseMapper(glyphs) : this.getUnicodeHexs(glyphs);
@@ -265,8 +277,6 @@ export default class App extends Component {
       this.state.glyphsMapperCaches[file] = { glyphs, mapper };        
       this.loadFileGlyphs(file, files, glyphs, mapper);
       this.storageFiles(files);
-
-      console.log(this.state.glyphsMapperCaches);
     });  
   }
 
@@ -287,9 +297,7 @@ export default class App extends Component {
     return glyphs;
   }
 
-  loadFileGlyphs(selectedFile = '', files = [], glyphs = [], mapper = {}) {
-    console.log(selectedFile);
-    console.log(files);
+  loadFileGlyphs(selectedFile = '', files = [], glyphs = [], mapper = {}) {  
     const mapperHtml = this.getMapperHtml(mapper);
     const glyphsHtml = this.getGlyphWrapperHtml(glyphs);
     this.setState({
