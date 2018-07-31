@@ -266,7 +266,6 @@ export default class App extends Component {
 
   filteredTTFFiles(files) {
     let oFiles = this.state.files;
-    console.log(oFiles);
     return files.filter(e => {
       return e.endsWith('.ttf') && !oFiles.includes(e);
     });
