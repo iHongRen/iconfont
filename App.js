@@ -38,6 +38,7 @@ export default class App extends Component {
       glyphsMapperCaches: {},
       copyButtonTitle: 'copy',
       parseErrorText: '',
+      glyphCount: 0,
       loading: false,
     }
   }
@@ -170,10 +171,14 @@ export default class App extends Component {
     );
   }
 
-  renderWarnBox() {
+  renderBottomBox() {
+    const isWarn = this.state.parseErrorText.length > 0;
+    const bottomStyles = isWarn ? bottomViewStyles.warnView : bottomViewStyles.bottomView;
+    const textStyles = isWarn ? bottomViewStyles.warnText : bottomViewStyles.bottomText;
+    const text = isWarn ? this.state.parseErrorText : `${this.state.glyphCount} items`;
     return (
-      <View style={{ backgroundColor: '#f9bd4b', height: 44, alignItems: 'center', justifyContent: 'center', position: 'absolute', bottom: 0, left: 0, right: 0}}>
-        <Text style={{ color: 'white', textAlign: 'center',  fontSize: 16}}>{this.state.parseErrorText}</Text>
+      <View style={bottomStyles}>
+        <Text style={textStyles}>{text}</Text>
       </View>
     );
   }
@@ -183,7 +188,7 @@ export default class App extends Component {
       <View style={styles.container}> 
         { this.renderAppNameView() }        
         { this.state.files.length === 0 ? this.renderDragView() : this.renderPanelView() }
-        { !!this.state.parseErrorText && this.renderWarnBox() }
+        { this.renderBottomBox() }
       </View>
     );
   }
@@ -206,7 +211,7 @@ export default class App extends Component {
     }
   }
 
-  onShouldStartLoadWithRequest = (event) => {
+  onShouldStartLoadWithRequest = (e) => {
     return false;
   };
 
@@ -274,7 +279,9 @@ export default class App extends Component {
       if (err) {
         // console.warn(err);
         this.setState({ parseErrorText: err.message });
-        setTimeout(() => { this.setState({ parseErrorText: '' }); }, 3000);
+        setTimeout(() => { 
+          this.setState({ parseErrorText: '' }) 
+        }, 3000);
         this.setState({ loading: false });
         return;
       }
@@ -312,7 +319,8 @@ export default class App extends Component {
       glyphsHtml: glyphsHtml,
       mapperHtml: mapperHtml,
       selectedFile: selectedFile,
-      files: files
+      files: files,
+      glyphCount: glyphs.length
     }, ()=> {
       if(this.state.loading) {
         this.setState({ loading: false });
@@ -423,6 +431,14 @@ export default class App extends Component {
   }
 }
 
+const bottomBase = { paddingHorizontal: 15, paddingTop: 5, height: 25 };
+const bottomViewStyles = StyleSheet.create({
+  bottomView: { ...bottomBase, backgroundColor: '#f3f3f3' },
+  bottomText: { color: '#333', fontSize: 12},
+  warnView: { ...bottomBase, backgroundColor: 'red' },
+  warnText: { color: 'white', fontSize: 12 },
+});
+
 const fileItemStyles = StyleSheet.create({
   fontFileWrap: {
     flex: 1,
@@ -487,7 +503,7 @@ const panelStyles = StyleSheet.create({
   },
   fontShowView: {
     flex: 1,
-    marginVertical: 15,
+    marginTop: 15,
     marginHorizontal: 15,
     flexDirection: 'row',
     justifyContent: 'space-between',
