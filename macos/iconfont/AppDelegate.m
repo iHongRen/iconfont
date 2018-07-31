@@ -75,8 +75,5 @@
   return YES;
 }
 
-- (BOOL)application:(NSApplication *)sender openFile:(NSString *)filename {
-  return YES;
-}
 
 @end

@@ -173,14 +173,19 @@ export default class App extends Component {
 
   renderBottomBox() {
     const isWarn = this.state.parseErrorText.length > 0;
-    const bottomStyles = isWarn ? bottomViewStyles.warnView : bottomViewStyles.bottomView;
-    const textStyles = isWarn ? bottomViewStyles.warnText : bottomViewStyles.bottomText;
-    const text = isWarn ? this.state.parseErrorText : `${this.state.glyphCount} items`;
-    return (
-      <View style={bottomStyles}>
-        <Text style={textStyles}>{text}</Text>
-      </View>
-    );
+    const hasSelected = !!this.state.selectedFile;
+    if (isWarn || hasSelected) {
+      const bottomStyles = isWarn ? bottomViewStyles.warnView : bottomViewStyles.bottomView;
+      const textStyles = isWarn ? bottomViewStyles.warnText : bottomViewStyles.bottomText;
+      const text = isWarn ? this.state.parseErrorText : `${this.state.glyphCount} items`;
+      return (
+        <View style={bottomStyles}>
+          <Text style={textStyles}>{text}</Text>
+        </View>
+      );
+    } else {
+      return <View />
+    }
   }
 
   render() {  
@@ -261,6 +266,7 @@ export default class App extends Component {
 
   filteredTTFFiles(files) {
     let oFiles = this.state.files;
+    console.log(oFiles);
     return files.filter(e => {
       return e.endsWith('.ttf') && !oFiles.includes(e);
     });
@@ -320,11 +326,8 @@ export default class App extends Component {
       mapperHtml: mapperHtml,
       selectedFile: selectedFile,
       files: files,
-      glyphCount: glyphs.length
-    }, ()=> {
-      if(this.state.loading) {
-        this.setState({ loading: false });
-      }
+      glyphCount: glyphs.length,
+      loading: false
     });
   }
 
