@@ -143,30 +143,42 @@ export default class App extends Component {
     );
   }
 
-  renderPanelView() {
-    const { glyphsHtml, dragOver, files } = this.state;
+  renderFileHeaderView() {
+    const { dragOver, files } = this.state;
     const dragColor =  dragOver ? '#bbb' : '#fff';
     const fileHeight = files.length > 5 ? 165 : 150;
     return (
+      <View style={[panelStyles.fileHeaderView, {borderColor: dragColor, height: fileHeight}]}
+        draggedTypes={['NSFilenamesPboardType']}         
+        onDragEnter={() => this.setState({dragOver: true})}
+        onDragLeave={() => this.setState({dragOver: false})}
+        onDrop={(e) => this.onDrop(e)}
+      >
+        { this.renderFontFileView() }
+      </View>
+    );
+  }
+
+  renderFontShowView() {
+    const { glyphsHtml } = this.state;  
+    return (     
+      <View style={panelStyles.fontShowView}>         
+        <View style={panelStyles.fontShow}>
+          <WebView 
+            source={{html: glyphsHtml}} 
+            onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
+          />
+        </View> 
+        { this.renderJsonMapperView() }          
+      </View>
+    );
+  }
+
+  renderPanelView() {
+    return (
       <View style={{flex: 1}}>
-        <View></View>
-        <View style={[panelStyles.fileHeaderView, {borderColor: dragColor, height: fileHeight}]}
-            draggedTypes={['NSFilenamesPboardType']}         
-            onDragEnter={() => this.setState({dragOver: true})}
-            onDragLeave={() => this.setState({dragOver: false})}
-            onDrop={(e) => this.onDrop(e)}
-          >
-          { this.renderFontFileView() }
-        </View>
-        <View style={panelStyles.fontShowView}>         
-          <View style={panelStyles.fontShow}>
-            <WebView 
-              source={{html: glyphsHtml}} 
-              onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
-            />
-          </View> 
-          { this.renderJsonMapperView() }          
-        </View>
+        { this.renderFileHeaderView() }
+        { this.renderFontShowView() }
       </View>
     );
   }
@@ -502,10 +514,10 @@ const panelStyles = StyleSheet.create({
     borderStyle: 'solid',
     borderColor: 'red',
     backgroundColor: '#fff',
+    marginBottom: 15,
   },
   fontShowView: {
     flex: 1,
-    marginTop: 15,
     marginHorizontal: 15,
     flexDirection: 'row',
     justifyContent: 'space-between',
