@@ -65,8 +65,8 @@
   NSMenuItem *containerItem = [NSMenuItem new];
   NSMenu *rootMenu = [[NSMenu alloc] initWithTitle:@""];
   [containerItem setSubmenu:rootMenu];
-  [rootMenu addItemWithTitle:@"About iconfont" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
-  [rootMenu addItemWithTitle:@"Quit iconfont" action:@selector(terminate:) keyEquivalent:@"q"];
+  [rootMenu addItemWithTitle:@"About" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+  [rootMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
   
   [[NSApp mainMenu] addItem:containerItem];
 }

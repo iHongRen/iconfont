@@ -1,21 +1,22 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
+/*
+ * @Author: ihongren 
+ * https://github.com/facebook/react-native 
+ * Copyright © 2018 ihongren. All rights reserved.
  */
 
 import React, { Component } from 'react';
 import {
-  StyleSheet,
   Text,
   View,
+  Linking,
   WebView,
+  Clipboard,  
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
+  MenuManager,
   AsyncStorage,
-  Clipboard,
-  Button,
-  ActivityIndicator
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 
 import * as opentype from 'opentype.js';
@@ -40,11 +41,27 @@ export default class App extends Component {
       parseErrorText: '',
       glyphCount: 0,
       loading: false,
+      topExpand: true,
+      rightExpand: true,
     }
   }
 
   componentDidMount() {   
     this.parseFileStorage();
+    this.addMenuItem();
+  }
+
+  addMenuItem() {
+    const items = [{
+      title: 'Docs',
+      key: '',
+      callback: () => { Linking.openURL('https://github.com/iHongRen') }
+    },{
+      title: 'Issues',
+      key: '',
+      callback: () => { Linking.openURL('https://github.com/iHongRen') }
+    }];
+    MenuManager.addSubmenu('Usage', items);
   }
 
   renderAppNameView() {
@@ -77,68 +94,8 @@ export default class App extends Component {
           onDragLeave={() => this.setState({dragOver: false})}
           onDrop={(e) => this.onDrop(e)}
         >
-          <Text style={{fontSize: 20, color: dragColor }}>{ this.getDragTip() }</Text>               
+        <Text style={{fontSize: 20, color: dragColor }}>{ this.getDragTip() }</Text>     
         </View>
-      </View>
-    );
-  }
-
-  renderFontFileView() {
-    const { files, selectedFile, dragOver, mouseOver } = this.state;
-    const dragColor =  (dragOver || mouseOver) ? '#333' :  '#bbb';
-    return (
-      <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={ files.length > 5 }
-      style={fileItemStyles.fontFileWrap}
-      contentContainerStyle={{alignItems: 'center', justifyContent: 'center'}} 
-      >
-        {
-          files.map(e => { 
-            const isSelectedColor = e === selectedFile ? '#333' : '#bbb';
-            return (
-            <View key={e} style={fileItemStyles.fileItemWrap}>
-              <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(e)}>
-                <View style={[fileItemStyles.fileIconWrap, {borderColor: isSelectedColor}]}>
-                  <Text style={{fontSize: 40,  color: isSelectedColor}}>𝐹</Text>
-                </View>
-                <View style={fileItemStyles.fileNameWrap}>
-                  <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{e.split('/').pop()}</Text>
-                </View>             
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.6} style={[fileItemStyles.fileClose, {backgroundColor: isSelectedColor}]} onPress={() => this.onDeleteFileItem(e)}>
-                <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
-              </TouchableOpacity>                                         
-            </View>
-            )}
-          )        
-        }
-         <View
-          style={{marginLeft: 20}}   
-          onMouseEnter={() => this.setState({mouseOver: true})}
-          onMouseLeave={() => this.setState({mouseOver: false})}
-        >
-          <Text style={{color: dragColor}}>{ this.getDragTip()}</Text>
-        </View>
-      </ScrollView>
-    );    
-  }
-
-  renderJsonMapperView() {
-    return (
-      <View style={panelStyles.mapperView}>
-        <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
-          <Button
-            style={{ width: 60, height: 25, marginRight: 10}}
-            title={this.state.copyButtonTitle}
-            bezelStyle={'rounded'}
-            onPress={() => this.onCopyMapper()}
-          />
-        </View>
-        <WebView
-          source={{html: this.state.mapperHtml}} 
-          onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
-        />
       </View>
     );
   }
@@ -159,6 +116,56 @@ export default class App extends Component {
     );
   }
 
+  renderFontFileView() {
+    const { files, dragOver, mouseOver } = this.state;
+    const dragColor =  (dragOver || mouseOver) ? '#333' :  '#bbb';
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={ files.length > 5 }
+        style={fileItemStyles.fontFileWrap}
+        contentContainerStyle={{alignItems: 'center', justifyContent: 'center'}} 
+      >
+        { files.map(file => this.renderFileItemView(file)) }
+         <View
+          style={{marginLeft: 20}}   
+          onMouseEnter={() => this.setState({mouseOver: true})}
+          onMouseLeave={() => this.setState({mouseOver: false})}
+        >
+          <Text style={{color: dragColor}}>{ this.getDragTip()}</Text>
+        </View>
+      </ScrollView>
+    );    
+  }
+
+  renderFileItemView(file) {
+    const isSelectedColor = (file === this.state.selectedFile) ? '#333' : '#bbb';
+    return (
+      <View key={file} style={fileItemStyles.fileItemWrap}>
+        <TouchableOpacity activeOpacity={0.6} style={fileItemStyles.fileItem} onPress={() => this.onFileSelected(file)}>
+          <View style={[fileItemStyles.fileIconWrap, {borderColor: isSelectedColor}]}>
+            <Text style={{fontSize: 40,  color: isSelectedColor}}>𝐹</Text>
+          </View>
+          <View style={fileItemStyles.fileNameWrap}>
+            <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{file.split('/').pop()}</Text>
+          </View>             
+        </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.6} style={[fileItemStyles.fileClose, {backgroundColor: isSelectedColor}]} onPress={() => this.onDeleteFileItem(file)}>
+          <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
+        </TouchableOpacity>                                         
+      </View>
+    );
+  }
+
+  renderPanelView() {
+    return (
+      <View style={{flex: 1}}>
+        { this.state.topExpand && this.renderFileHeaderView() }
+        { this.renderFontShowView() }
+      </View>
+    );
+  }
+
   renderFontShowView() {
     const { glyphsHtml } = this.state;  
     return (     
@@ -169,35 +176,85 @@ export default class App extends Component {
             onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
           />
         </View> 
-        { this.renderJsonMapperView() }          
+        { this.state.rightExpand && this.renderJsonMapperView() }          
       </View>
     );
   }
 
-  renderPanelView() {
+  renderJsonMapperView() {
     return (
-      <View style={{flex: 1}}>
-        { this.renderFileHeaderView() }
-        { this.renderFontShowView() }
+      <View style={panelStyles.mapperView}>        
+        <WebView
+          source={{html: this.state.mapperHtml}} 
+          onShouldStartLoadWithRequest={this.onShouldStartLoadWithRequest}
+        />
       </View>
     );
-  }
+  }  
 
-  renderBottomBox() {
+  renderBottomView() {
     const isWarn = this.state.parseErrorText.length > 0;
+    if (isWarn) return this.renderWarnView();
+
     const hasSelected = !!this.state.selectedFile;
-    if (isWarn || hasSelected) {
-      const bottomStyles = isWarn ? bottomViewStyles.warnView : bottomViewStyles.bottomView;
-      const textStyles = isWarn ? bottomViewStyles.warnText : bottomViewStyles.bottomText;
-      const text = isWarn ? this.state.parseErrorText : `${this.state.glyphCount} items`;
+    if (hasSelected) {
+      const text = `${this.state.glyphCount} items`;
       return (
-        <View style={bottomStyles}>
-          <Text style={textStyles}>{text}</Text>
+        <View style={bottomViewStyles.bottomView}>
+          <View style={bottomViewStyles.contentView}>
+            <View style={{flexDirection: 'row', marginRight: 5}}>
+              { this.renderTopExpandButton() }
+              { this.renderRightExpandButton() }
+              <Text style={bottomViewStyles.bottomText}>{text}</Text>
+            </View>
+          </View> 
+          { this.state.rightExpand && this.renderCopyView() }                 
         </View>
       );
-    } else {
-      return <View />
-    }
+    } 
+
+    return <View />
+  }
+
+  renderTopExpandButton() {
+    const color = this.state.topExpand ? '#555' : '#aaa';
+    return (
+      <TouchableOpacity
+        style={[expandStyles.expandButton, {borderColor: color}]} 
+        activeOpacity={0.7}
+        onPress={()=> this.setState({ topExpand: !this.state.topExpand })}>
+        <View style={[expandStyles.topEx ,{backgroundColor:color}]}></View>
+      </TouchableOpacity>
+    );
+  }
+  
+  renderRightExpandButton() {
+    const color = this.state.rightExpand ? '#555' : '#aaa';
+    return (
+      <TouchableOpacity
+        style={[expandStyles.expandButton, {borderColor: color, alignItems: 'flex-end'}]} 
+        activeOpacity={0.7}
+        onPress={()=> this.setState({ rightExpand: !this.state.rightExpand },()=> this.reloadGlyphsHtml())}
+        >        
+        <View style={[expandStyles.rightEx, {backgroundColor:color}]}></View>
+      </TouchableOpacity>
+    );
+  }
+  
+  renderWarnView() {
+    return (
+      <View style={bottomViewStyles.warnView}>         
+        <Text style={ bottomViewStyles.warnText}>{this.state.parseErrorText}</Text>
+      </View>
+    );
+  }
+
+  renderCopyView() {
+    return (
+      <TouchableOpacity activeOpacity={0.6} onPress={() => this.onCopyMapper()}>
+        <Text style={{color: '#333', fontSize: 12, marginTop: -2}}>{this.state.copyButtonTitle}</Text>
+      </TouchableOpacity>
+    );
   }
 
   render() {  
@@ -205,7 +262,7 @@ export default class App extends Component {
       <View style={styles.container}> 
         { this.renderAppNameView() }        
         { this.state.files.length === 0 ? this.renderDragView() : this.renderPanelView() }
-        { this.renderBottomBox() }
+        { this.renderBottomView() }
       </View>
     );
   }
@@ -217,7 +274,7 @@ export default class App extends Component {
       let text = this.getMapperJsonText(mapper);
       Clipboard.setString(text);        
       this.setState({
-        copyButtonTitle: '✓'
+        copyButtonTitle: ' ✓ '
       })
       
       setTimeout(() => {
@@ -342,6 +399,16 @@ export default class App extends Component {
     });
   }
 
+  reloadGlyphsHtml() {
+    const glyphsMapper = this.state.glyphsMapperCaches[this.state.selectedFile];
+    if (glyphsMapper && glyphsMapper.glyphs) {
+      const glyphsHtml = this.getGlyphWrapperHtml(glyphsMapper.glyphs);
+      this.setState({
+        glyphsHtml: glyphsHtml
+      });
+    }
+  }
+
   filteredNullGlyph(glyph) {
     const { xMax, xMin, yMax, yMin } = glyph;
     return !!xMax || !!xMin || !!yMax || !!yMin;
@@ -367,10 +434,10 @@ export default class App extends Component {
     return glyphs.filter(e => !!e.hex).map(e => e.hex);
   }
 
-  getGlyphHtml(glyph, index) {
+  getGlyphHtml(glyph, index, numberOfRow=3) {
     const { svg, name, hex } = glyph;
-    const glyphTop = index < 3 ? 'glyph-top' : '';
-    const glyphLeft = index%3 === 0 ? 'glyph-left' : '';
+    const glyphTop = index < numberOfRow ? 'glyph-top' : '';
+    const glyphLeft = index % numberOfRow === 0 ? 'glyph-left' : '';
     const hexu = !!hex ? `\\u${hex}`: '';
     const hexx = !!hex ? `&#x${hex};` : '';
     return (
@@ -387,11 +454,12 @@ export default class App extends Component {
   }
  
   getGlyphWrapperHtml(glyphs) {
+    const numberOfRow = this.state.rightExpand ? 3 : 4;
     return (
       `<div class="warpper">
-        ${glyphs.reduce((prev, cur, index) => prev + this.getGlyphHtml(cur, index),'')}
+        ${glyphs.reduce((prev, cur, index) => prev + this.getGlyphHtml(cur, index, numberOfRow),'')}
       </div> 
-      ${glyphWrapStyles}`
+      ${glyphWrapStyles(numberOfRow)}`
     );
   }
 
@@ -445,10 +513,42 @@ export default class App extends Component {
   }
 }
 
-const bottomBase = { paddingHorizontal: 15, paddingTop: 5, height: 25 };
+const expandStyles = StyleSheet.create({
+  expandButton: {
+    borderStyle: 'solid',
+    borderWidth: 2,
+    width: 16,
+    height: 14,
+    marginRight: 3
+  },
+  topEx: {
+    marginTop: 1,
+    marginHorizontal: 1, 
+    height: 2,
+  },
+  rightEx: {
+    flex: 1,
+    marginRight: 2,
+    marginVertical: 1,
+    width: 2
+  }
+});
+
+const bottomBase = {
+  paddingTop: 5, 
+  paddingHorizontal: 15,  
+  height: 25,
+}
+
 const bottomViewStyles = StyleSheet.create({
-  bottomView: { ...bottomBase, backgroundColor: '#f3f3f3' },
-  bottomText: { color: '#333', fontSize: 12},
+  bottomView: {
+    ...bottomBase,
+    backgroundColor: '#f3f3f3', 
+    flexDirection: 'row', 
+    justifyContent: 'space-between' 
+  },
+  contentView: { flexDirection: 'row' },
+  bottomText: { color: '#333', fontSize: 12, marginLeft: 10},
   warnView: { ...bottomBase, backgroundColor: 'red' },
   warnText: { color: 'white', fontSize: 12 },
 });
@@ -556,33 +656,37 @@ const styles = StyleSheet.create({
   }
 });
 
-const glyphWrapStyles = 
-`<style> 
-  .glyph {
-    padding: 10px 15px 10px 15px;
-    width: 33.333333%;
-    border-bottom: 1px solid lightgray;
-    border-right: 1px solid lightgray; 
-    -webkit-box-sizing:border-box;
-  }
-  .glyph-top { border-top: 1px solid lightgray; }
-  .glyph-left { border-left: 1px solid lightgray; }  
-  .glyph-svg {
-    margin-top: 10px;
-    width: 50px;
-    height: 50px;       
-  }
-  .warpper {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  p {
-    white-space: nowrap;
-    text-overflow: ellipsis; 
-    overflow: hidden;     
-  }        
-</style>`;
+const glyphWrapStyles = (numberOfRow=3) => {
+  const width = numberOfRow ? `${100 / numberOfRow}%` : '33.333333%';
+  return (
+    `<style> 
+      .glyph {
+        padding: 10px 15px 10px 15px;
+        width: ${width};
+        border-bottom: 1px solid lightgray;
+        border-right: 1px solid lightgray; 
+        -webkit-box-sizing:border-box;
+      }
+      .glyph-top { border-top: 1px solid lightgray; }
+      .glyph-left { border-left: 1px solid lightgray; }  
+      .glyph-svg {
+        margin-top: 10px;
+        width: 50px;
+        height: 50px;       
+      }
+      .warpper {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      p {
+        white-space: nowrap;
+        text-overflow: ellipsis; 
+        overflow: hidden;     
+      }        
+    </style>`
+  );
+}
 
 const JsonStyles = 
 `<style>
