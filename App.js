@@ -55,11 +55,11 @@ export default class App extends Component {
     const items = [{
       title: 'Docs',
       key: '',
-      callback: () => { Linking.openURL('https://github.com/iHongRen') }
+      callback: () => { Linking.openURL('https://github.com/iHongRen/iconfont') }
     },{
       title: 'Issues',
       key: '',
-      callback: () => { Linking.openURL('https://github.com/iHongRen') }
+      callback: () => { Linking.openURL('https://github.com/iHongRen/iconfont/issues') }
     }];
     MenuManager.addSubmenu('Usage', items);
   }
