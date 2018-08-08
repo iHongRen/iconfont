@@ -1,6 +1,6 @@
 /*
  * @Author: ihongren 
- * https://github.com/facebook/react-native 
+ * https://github.com/iHongRen/iconfont 
  * Copyright © 2018 ihongren. All rights reserved.
  */
 
@@ -54,11 +54,11 @@ export default class App extends Component {
   addMenuItem() {
     const items = [{
       title: 'Docs',
-      key: '',
+      key: 'I',
       callback: () => { Linking.openURL('https://github.com/iHongRen/iconfont') }
     },{
       title: 'Issues',
-      key: '',
+      key: 'D',
       callback: () => { Linking.openURL('https://github.com/iHongRen/iconfont/issues') }
     }];
     MenuManager.addSubmenu('Usage', items);
