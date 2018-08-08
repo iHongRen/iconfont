@@ -1,5 +1,5 @@
 ## iconfont
-<img src="/screenshots/108x108.png" width="64" hegiht="64" />  **[iconfont](https://github.com/iHongRen/iconfont)** is  a previewer for **.ttf** file.
+<img src="/screenshots/108x108.png" width="28" hegiht="28" />  **[iconfont](https://github.com/iHongRen/iconfont)** is  a previewer for **.ttf** file.
 
 - You can drag&drop one or more .ttf files.
 - You can copy the mapped text and json.
@@ -8,13 +8,13 @@
 
 
 
-### # preview
-
----
+###  preview
 
 <img src="/screenshots/view.gif" width="688" hegiht="520" />
 
 
+
+### screenshots
 
 <img src="/screenshots/preview.png" width="688" hegiht="520" />
 
