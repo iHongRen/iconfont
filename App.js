@@ -193,8 +193,10 @@ export default class App extends Component {
   }  
 
   renderBottomView() {
-    const isWarn = this.state.parseErrorText.length > 0;
-    if (isWarn) return this.renderWarnView();
+    const isWarn = !!this.state.parseErrorText;
+    if (isWarn) {
+      return this.renderWarnView();
+    } 
 
     const hasSelected = !!this.state.selectedFile;
     if (hasSelected) {
@@ -351,11 +353,12 @@ export default class App extends Component {
 
     opentype.load(file, (err, font) => {
       if (err) {
-        // console.warn(err);
-        this.setState({ parseErrorText: err.message });
+        // console.warn(err);      
+        let error = err.message || err;
+        this.setState({ parseErrorText: `${file} ${error}`});
         setTimeout(() => { 
           this.setState({ parseErrorText: '' }) 
-        }, 3000);
+        }, 10000);
         this.setState({ loading: false });
         return;
       }
@@ -395,7 +398,8 @@ export default class App extends Component {
       selectedFile: selectedFile,
       files: files,
       glyphCount: glyphs.length,
-      loading: false
+      loading: false,
+      parseErrorText: ''
     });
   }
 
@@ -549,7 +553,7 @@ const bottomViewStyles = StyleSheet.create({
   },
   contentView: { flexDirection: 'row' },
   bottomText: { color: '#333', fontSize: 12, marginLeft: 10},
-  warnView: { ...bottomBase, backgroundColor: 'red' },
+  warnView: { ...bottomBase, backgroundColor: '#f00' },
   warnText: { color: 'white', fontSize: 12 },
 });
 
