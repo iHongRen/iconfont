@@ -17,13 +17,18 @@ import {
   AsyncStorage,
   TouchableOpacity,
   ActivityIndicator,
+  NativeModules,
+  NativeEventEmitter,
 } from 'react-native';
+const { AppOpenFilesEmitter } = NativeModules;
 
 import * as opentype from 'opentype.js';
 
 const AppConfig = {
   name: 'iconfont',
-  version: '1.0'
+  version: '1.0',
+  docs: 'https://github.com/iHongRen/iconfont',
+  issues: 'https://github.com/iHongRen/iconfont/issues'
 }
 
 export default class App extends Component {
@@ -46,20 +51,36 @@ export default class App extends Component {
     }
   }
 
-  componentDidMount() {   
-    this.parseFileStorage();
+  componentDidMount() {
     this.addMenuItem();
+    this.parseFileStorage();
+
+    const openFilesEmitter = new NativeEventEmitter(AppOpenFilesEmitter);
+    this.fileSubscription = openFilesEmitter.addListener(
+    'ApplicationOpenFilenamesEvent',
+    (files) => {
+      console.log(files);
+      if (this.state.loading) {
+        this.openFilenames = files;
+      } else {
+        this.openFiles(files);
+      }
+    });
+  }
+
+  componentWillUnmount() {
+    this.fileSubscription.remove();
   }
 
   addMenuItem() {
     const items = [{
       title: 'Docs',
       key: 'I',
-      callback: () => { Linking.openURL('https://github.com/iHongRen/iconfont') }
+      callback: () => { Linking.openURL(AppConfig.docs) }
     },{
       title: 'Issues',
       key: 'D',
-      callback: () => { Linking.openURL('https://github.com/iHongRen/iconfont/issues') }
+      callback: () => { Linking.openURL(AppConfig.issues) }
     }];
     MenuManager.addSubmenu('Usage', items);
   }
@@ -214,7 +235,6 @@ export default class App extends Component {
         </View>
       );
     } 
-
     return <View />
   }
 
@@ -246,7 +266,7 @@ export default class App extends Component {
   renderWarnView() {
     return (
       <View style={bottomViewStyles.warnView}>         
-        <Text style={ bottomViewStyles.warnText}>{this.state.parseErrorText}</Text>
+        <Text style={bottomViewStyles.warnText} numberOfLines={1}>{this.state.parseErrorText}</Text>
       </View>
     );
   }
@@ -329,10 +349,7 @@ export default class App extends Component {
     this.setState({ dragOver: false });
 
     let files = e.nativeEvent.files;
-    files = this.filteredTTFFiles(files);
-
-    if(files.length === 0) return;
-    this.parseFile(files[0], [...this.state.files, ...files]);
+    this.openFiles(files);
   }
 
   filteredTTFFiles(files) {
@@ -340,6 +357,13 @@ export default class App extends Component {
     return files.filter(e => {
       return e.endsWith('.ttf') && !oFiles.includes(e);
     });
+  }
+
+  openFiles(files) {
+    let filenames = this.filteredTTFFiles(files);
+
+    if(filenames.length === 0) return;
+    this.parseFile(filenames[0], [...this.state.files, ...filenames]);
   }
 
   parseFile(file, files) {
@@ -359,7 +383,7 @@ export default class App extends Component {
         setTimeout(() => { 
           this.setState({ parseErrorText: '' }) 
         }, 10000);
-        this.setState({ loading: false });
+        this.handleParsed();
         return;
       }
       const glyphs = this.getConfigGlyphs(font.glyphs);
@@ -370,6 +394,16 @@ export default class App extends Component {
       this.loadFileGlyphs(file, files, glyphs, mapper);
       this.storageFiles(files);
     });  
+  }
+
+  handleParsed() {  
+    this.setState({ loading: false });
+
+    if (this.openFilenames) {
+      const files = [...this.openFilenames];
+      this.openFiles(files);
+      this.openFilenames = nil;     
+    }
   }
 
   getConfigGlyphs(fontGlyphs) {
@@ -398,8 +432,9 @@ export default class App extends Component {
       selectedFile: selectedFile,
       files: files,
       glyphCount: glyphs.length,
-      loading: false,
       parseErrorText: ''
+    }, () => {
+      this.handleParsed();
     });
   }
 
@@ -504,10 +539,13 @@ export default class App extends Component {
   }
 
   parseFileStorage() {
+    this.state.loading = true;
     AsyncStorage.getItem('FileNameStorageKey').then(filesJson => {
       const files = JSON.parse(filesJson);
       if (Array.isArray(files) && files.length > 0) {
         this.parseFile(files[0], files);
+      } else {
+        this.handleParsed();
       }
     });
   }

@@ -1,5 +1,5 @@
 ## iconfont
-<img src="/screenshots/108x108.png" width="28" hegiht="28" />  **[iconfont](https://github.com/iHongRen/iconfont)** is  a previewer for **.ttf** file.
+<img src="/screenshots/108x108.png" width="28" hegiht="28" />  **[iconfont](https://github.com/iHongRen/iconfont)** is  a previewer for **.ttf** file. **macos 10.11+ required**
 
 - You can drag&drop one or more .ttf files.
 - You can copy the mapped text and json.
