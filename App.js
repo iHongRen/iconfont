@@ -524,7 +524,9 @@ export default class App extends Component {
     return text.replace(regx, (match) => {
       let cls = 'number';
       if (/^"/.test(match)) {
-        cls = /:$/.test(match) ? 'key' : 'string'; 
+        const isKey = /:$/.test(match);        
+        match = isKey ? match.replace(/\"/g,"").replace(/\-/g,"_").replace(/\_(\w)/g, (all, letter) => letter.toUpperCase())  : match;
+        cls = isKey ? 'key' : 'string'; 
       } else if (/true|false/.test(match)) {
         cls = 'boolean';
       } else if (/null/.test(match)) {
