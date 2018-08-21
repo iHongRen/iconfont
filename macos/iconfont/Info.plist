@@ -44,6 +44,8 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeName</key>
+			<string>ttf font</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>CFBundleTypeExtensions</key>
@@ -52,10 +54,10 @@
 			</array>
 			<key>LSHandlerRank</key>
 			<string>Default</string>
-      <key>LSItemContentTypes</key>
-      <array>
-        <string>public.truetype-ttf-font</string>
-      </array>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.truetype-ttf-font</string>
+			</array>
 		</dict>
 	</array>
 	<key>NSPrincipalClass</key>
