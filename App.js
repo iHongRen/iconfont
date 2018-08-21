@@ -601,7 +601,8 @@ const bottomViewStyles = StyleSheet.create({
 const fileItemStyles = StyleSheet.create({
   fontFileWrap: {
     flex: 1,
-    marginHorizontal: 10,   
+    backgroundColor: '#fff',
+    marginHorizontal: 10,       
   },
   fileItemWrap: {
     width: 100,
@@ -657,7 +658,6 @@ const panelStyles = StyleSheet.create({
     flexDirection: 'row',
     borderWidth: 2,
     borderStyle: 'solid',
-    borderColor: 'red',
     backgroundColor: '#fff',
     marginBottom: 15,
   },
