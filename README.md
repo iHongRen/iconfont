@@ -20,7 +20,7 @@
 
 ###  preview
 
-<img src="/screenshots/view.gif" width="688" hegiht="520" />
+<img src="./screenshots/view.gif" width="540" />
 
 
 
@@ -28,7 +28,7 @@
 
 ### screenshots
 
-<img src="/screenshots/preview.png" width="688" hegiht="520" />
+<img src="./screenshots/preview.png" width="600" />
 
  
 
