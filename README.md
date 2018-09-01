@@ -2,8 +2,7 @@
 
 **已上架Mac App Store**
 
-#### <img src="/Users/chen/Documents/project/my_opensource/iconfont/screenshots/108x108.png" width="40" hegiht="40" /><a href="https://itunes.apple.com/cn/app/iconfont/id1431650750">Iconfont</a>
-
+#### <a href="https://itunes.apple.com/cn/app/iconfont/id1431650750"><img src="./screenshots/108x108.png" width="40" hegiht="40" /> **Iconfont**</a>
 > macos 10.11+ required**
 
 </br>
