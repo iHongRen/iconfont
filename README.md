@@ -3,7 +3,7 @@
 **已上架Mac App Store**
 
 #### <a href="https://itunes.apple.com/cn/app/iconfont/id1431650750"><img src="./screenshots/108x108.png" width="40" hegiht="40" /> **Iconfont**</a>
-> macos 10.11+ required**
+> macos 10.11+ required
 
 </br>
 
