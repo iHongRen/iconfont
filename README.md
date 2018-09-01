@@ -2,7 +2,7 @@
 
 **已上架Mac App Store**
 
-#### <a href="https://itunes.apple.com/cn/app/iconfont/id1431650750"><img src="/Users/chen/Documents/project/my_opensource/iconfont/screenshots/108x108.png" width="40" hegiht="40" /> Iconfont</a>
+#### <img src="/Users/chen/Documents/project/my_opensource/iconfont/screenshots/108x108.png" width="40" hegiht="40" /><a href="https://itunes.apple.com/cn/app/iconfont/id1431650750">Iconfont</a>
 
 > macos 10.11+ required**
 
@@ -12,17 +12,17 @@
 - 可直接复制 **unicode** 编码。
 - name 和 unicode 映射的文件，name自动转为驼峰命名。
 
+</br>	
 
-
- **[Iconfont](https://github.com/iHongRen/iconfont)** is  a previewer for **.ttf** file. 
+ **[Iconfont](https://itunes.apple.com/cn/app/iconfont/id1431650750)** is  a previewer for **.ttf** file. 
 
 - You can drag&drop one or more .ttf files.
 - You can copy the mapped text and json.
 - `&#x0078 `and  `\u0078` **unicode** is very useful for developers.   
 
-</br>	
+</br>
 
-| **icon fonts  library** (字体图标网站)          |
+| 字体图标网站 ( **icon fonts  library** )        |
 | ----------------------------------------------- |
 | [icomoon.io](https://icomoon.io/app/#/select)   |
 | [iconfont.cn](http://www.iconfont.cn/)          |
