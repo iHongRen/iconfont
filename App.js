@@ -14,7 +14,6 @@ import {
   ScrollView,
   StyleSheet,
   MenuManager,
-  AsyncStorage,
   TouchableOpacity,
   ActivityIndicator,
   NativeModules,
@@ -26,7 +25,7 @@ import * as opentype from 'opentype.js';
 
 const AppConfig = {
   name: 'iconfont',
-  version: '1.0',
+  version: '1.0.1',
   docs: 'https://github.com/iHongRen/iconfont',
   issues: 'https://github.com/iHongRen/iconfont/issues'
 }
@@ -53,7 +52,6 @@ export default class App extends Component {
 
   componentDidMount() {
     this.addMenuItem();
-    this.parseFileStorage();
 
     const openFilesEmitter = new NativeEventEmitter(AppOpenFilesEmitter);
     this.fileSubscription = openFilesEmitter.addListener(
@@ -98,7 +96,7 @@ export default class App extends Component {
   }
 
   renderDragView() {
-    const {  dragOver, mouseOver  } = this.state;
+    const { dragOver, mouseOver } = this.state;
     const dragColor =  (dragOver || mouseOver) ? '#333' : 'gray';
     return (
       <View
@@ -171,7 +169,11 @@ export default class App extends Component {
             <Text style={[fileItemStyles.fileName,{color: isSelectedColor}]} numberOfLines={1}>{file.split('/').pop()}</Text>
           </View>             
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.6} style={[fileItemStyles.fileClose, {backgroundColor: isSelectedColor}]} onPress={() => this.onDeleteFileItem(file)}>
+        <TouchableOpacity 
+          activeOpacity={0.6} 
+          style={[fileItemStyles.fileClose, {backgroundColor: isSelectedColor}]} 
+          onPress={() => this.onDeleteFileItem(file)}
+        >
           <Text style={fileItemStyles.fileCloseIcon}>✕</Text>
         </TouchableOpacity>                                         
       </View>
@@ -221,17 +223,17 @@ export default class App extends Component {
 
     const hasSelected = !!this.state.selectedFile;
     if (hasSelected) {
-      const text = `${this.state.glyphCount} items`;
+      const glyphCount = `${this.state.glyphCount} items`;
       return (
         <View style={bottomViewStyles.bottomView}>
           <View style={bottomViewStyles.contentView}>
             <View style={{flexDirection: 'row', marginRight: 5}}>
               { this.renderTopExpandButton() }
               { this.renderRightExpandButton() }
-              <Text style={bottomViewStyles.bottomText}>{text}</Text>
-            </View>
+              <Text style={bottomViewStyles.bottomText}>{glyphCount}</Text>              
+            </View>           
           </View> 
-          { this.state.rightExpand && this.renderCopyView() }                 
+          { this.state.rightExpand && this.renderCopyView() }      
         </View>
       );
     } 
@@ -322,7 +324,7 @@ export default class App extends Component {
     const deleteIndex = files.indexOf(file);    
     const newFiles = files.filter(e => e != file);
     this.state.glyphsMapperCaches[file] = null;
-    this.storageFiles(newFiles);
+
     if (newFiles.length === 0) {
       this.loadFileGlyphs();     
       return; 
@@ -392,7 +394,6 @@ export default class App extends Component {
       
       this.state.glyphsMapperCaches[file] = { glyphs, mapper };        
       this.loadFileGlyphs(file, files, glyphs, mapper);
-      this.storageFiles(files);
     });  
   }
 
@@ -540,22 +541,6 @@ export default class App extends Component {
   getDragTip() {
     return this.state.dragOver ? 'Release to open' : 'Drop .ttf files here';
   }
-
-  parseFileStorage() {
-    this.state.loading = true;
-    AsyncStorage.getItem('FileNameStorageKey').then(filesJson => {
-      const files = JSON.parse(filesJson);
-      if (Array.isArray(files) && files.length > 0) {
-        this.parseFile(files[0], files);
-      } else {
-        this.handleParsed();
-      }
-    });
-  }
-
-  storageFiles(files) {
-    AsyncStorage.setItem('FileNameStorageKey', JSON.stringify(files));
-  }
 }
 
 const expandStyles = StyleSheet.create({
@@ -595,7 +580,7 @@ const bottomViewStyles = StyleSheet.create({
   contentView: { flexDirection: 'row' },
   bottomText: { color: '#333', fontSize: 12, marginLeft: 10},
   warnView: { ...bottomBase, backgroundColor: '#f00' },
-  warnText: { color: 'white', fontSize: 12 },
+  warnText: { color: 'white', fontSize: 12 }
 });
 
 const fileItemStyles = StyleSheet.create({
