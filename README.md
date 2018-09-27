@@ -57,8 +57,8 @@
 
 </br>
 
-### 打赏：（感谢支持）
+### [打赏 (Donation)](https://github.com/iHongRen/Donation/blob/master/Donation.md)
 
-<img src='./screenshots/alipay.png' width='20%' />&emsp;&emsp;<img src='./screenshots/wxpay.png' width='20%' />
+
 
 </br>
