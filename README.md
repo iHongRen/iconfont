@@ -2,7 +2,7 @@
 
 **已上架Mac App Store**
 
-#### <a href="https://itunes.apple.com/cn/app/iconfont/id1431650750"><img src="./screenshots/108x108.png" width="40" hegiht="40" /> **Iconfont**</a>
+#### <a href="https://itunes.apple.com/cn/app/iconfont/id1518516582">**Iconfont**</a>
 > macos 10.11+ required
 
 </br>
@@ -13,7 +13,7 @@
 
 </br>	
 
- **[Iconfont](https://itunes.apple.com/cn/app/iconfont/id1431650750)** is  a previewer for **.ttf** file. 
+ **[Iconfont](https://itunes.apple.com/cn/app/iconfont/id1518516582)** is  a previewer for **.ttf** file. 
 
 - You can drag&drop one or more .ttf files.
 - You can copy the mapped text and json.
